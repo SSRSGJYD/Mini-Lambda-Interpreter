@@ -17,9 +17,29 @@ isBool e = do
     TBool -> return TBool
     _ -> lift Nothing
 
+isInt :: Expr -> ContextState Type
+isInt e = do
+  et <- eval e
+  case et of
+    TInt -> return TInt
+    _ -> lift Nothing
+
+isChar :: Expr -> ContextState Type
+isChar e = do
+  et <- eval e
+  case et of
+    TChar -> return TChar
+    _ -> lift Nothing
+
+
 eval :: Expr -> ContextState Type
 eval (EBoolLit _) = return TBool
+eval (EIntLit _) = return TInt
+eval (ECharLit _) = return TChar
+
 eval (ENot e) = isBool e >> return TBool
+eval (EAnd e1 e2) = undefined
+eval (EOr e1 e2) = undefined
 -- ... more
 eval _ = undefined
 
