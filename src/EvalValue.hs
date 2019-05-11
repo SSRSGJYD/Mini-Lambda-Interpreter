@@ -25,7 +25,12 @@ getBool e = do
 
 eval :: Expr -> ContextState Value
 eval (EBoolLit b) = return $ VBool b
+eval (EIntLit i) = return $ VInt i
+eval (ECharLit c) = return $ VChar c
+
 eval (ENot e) = getBool e >>= \b -> return (VBool $ not b)
+-- eval (EAnd e1 e2) = getBool e1 >>= \e -> (getBool e2 >>= \e -> return (VBool $ b))
+eval (EOr e1 e2) = undefined
 -- ... more
 eval _ = undefined
 

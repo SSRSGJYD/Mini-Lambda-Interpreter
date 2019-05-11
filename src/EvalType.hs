@@ -17,11 +17,25 @@ isBool e = do
     TBool -> return TBool
     _ -> lift Nothing
 
+isBool2 :: Expr -> Expr -> ContextState Type
+isBool2 e1 e2 = do
+  et1 <- eval e1
+  case et1 of
+    TBool -> isBool e2
+    _ -> lift Nothing
+
 isInt :: Expr -> ContextState Type
 isInt e = do
   et <- eval e
   case et of
     TInt -> return TInt
+    _ -> lift Nothing
+
+isInt2 :: Expr -> Expr -> ContextState Type
+isInt2 e1 e2 = do
+  et1 <- eval e1
+  case et1 of
+    TInt -> isInt e2
     _ -> lift Nothing
 
 isChar :: Expr -> ContextState Type
@@ -31,6 +45,10 @@ isChar e = do
     TChar -> return TChar
     _ -> lift Nothing
 
+isSameType :: Expr -> Expr -> Bool
+isSameType e1 e2 = (et1 == et2)
+  where et1 = eval e1
+        et2 = eval e2
 
 eval :: Expr -> ContextState Type
 eval (EBoolLit _) = return TBool
@@ -38,11 +56,15 @@ eval (EIntLit _) = return TInt
 eval (ECharLit _) = return TChar
 
 eval (ENot e) = isBool e >> return TBool
-eval (EAnd e1 e2) = undefined
-eval (EOr e1 e2) = undefined
--- ... more
-eval _ = undefined
+eval (EAnd e1 e2) = isBool2 e1 e2 >> return TBool
+eval (EOr e1 e2) = isBool2 e1 e2 >> return TBool
 
+eval (EAdd e1 e2) = isInt2 e1 e2 >> return TInt
+eval (ESub e1 e2) = isInt2 e1 e2 >> return TInt
+eval (EMul e1 e2) = isInt2 e1 e2 >> return TInt
+eval (EDiv e1 e2) = isInt2 e1 e2 >> return TInt
+
+-- eval (EEq e1 e2) = 
 
 evalType :: Program -> Maybe Type
 evalType (Program adts body) = evalStateT (eval body) $
