@@ -3,7 +3,7 @@ module EvalValue where
 
 import AST
 import Control.Monad.State
-import qualified EvalType.eval as evalType
+import EvalType hiding (Context, ContextState)
 
 data Value
   = VBool Bool
@@ -23,14 +23,14 @@ type ContextState a = StateT Context Maybe a
 
 getBool :: Expr -> ContextState Bool
 getBool e = do
-  ev <- eval e
+  ev <- EvalValue.eval e
   case ev of
     VBool b -> return b
     _ -> lift Nothing
 
 getInt :: Expr -> ContextState Int
 getInt e = do
-  ev <- eval e
+  ev <- EvalValue.eval e
   case ev of
     VInt b -> return b
     _ -> lift Nothing
@@ -49,34 +49,36 @@ eval (ESub e1 e2) = getInt e1 >>= \e -> (getInt e2 >>= \f -> return (VInt $ e - 
 eval (EMul e1 e2) = getInt e1 >>= \e -> (getInt e2 >>= \f -> return (VInt $ e * f))
 eval (EDiv e1 e2) = getInt e1 >>= \e -> (getInt e2 >>= \f -> return (VInt $ e `div` f))
 
-eval (EEq e1 e2) = case evalType e1 of 
-                      TBool -> getBool e1 >>= \e -> (getBool e2 >>= \f -> return (VBool $ e == f))
-                      TInt -> getInt e1 >>= \e -> (getInt e2 >>= \f -> return (VInt $ e == f))
-                      TChar -> getChar e1 >>= \e -> (getChar e2 >>= \f -> return (VChar $ e == f))
-eval (ENeq e1 e2) = case evalType e1 of 
-                      TBool -> getBool e1 >>= \e -> (getBool e2 >>= \f -> return (VBool $ e != f))
-                      TInt -> getInt e1 >>= \e -> (getInt e2 >>= \f -> return (VInt $ e != f))
-                      TChar -> getChar e1 >>= \e -> (getChar e2 >>= \f -> return (VChar $ e != f))
+eval (EEq e1 e2) = do
+  et1 <- EvalType.eval e1
+  case et1 of 
+    TBool -> getBool e1 >>= \e -> (getBool e2 >>= \f -> return (VBool $ e == f))
+    TInt -> getInt e1 >>= \e -> (getInt e2 >>= \f -> return (VInt $ e == f))
+    TChar -> getChar e1 >>= \e -> (getChar e2 >>= \f -> return (VChar $ e == f))
+eval (ENeq e1 e2) = case EvalType.eval e1 of 
+                      TBool -> getBool e1 >>= \e -> (getBool e2 >>= \f -> return (VBool $ e /= f))
+                      TInt -> getInt e1 >>= \e -> (getInt e2 >>= \f -> return (VInt $ e /= f))
+                      TChar -> getChar e1 >>= \e -> (getChar e2 >>= \f -> return (VChar $ e /= f))
 
-eval (ELt e1 e2) = case evalType e1 of 
+eval (ELt e1 e2) = case EvalType.eval e1 of 
                       TInt -> getInt e1 >>= \e -> (getInt e2 >>= \f -> return (VInt $ e < f))
                       TChar -> getChar e1 >>= \e -> (getChar e2 >>= \f -> return (VChar $ e < f))
-eval (EGt e1 e2) = case evalType e1 of 
+eval (EGt e1 e2) = case EvalType.eval e1 of 
                       TInt -> getInt e1 >>= \e -> (getInt e2 >>= \f -> return (VInt $ e > f))
                       TChar -> getChar e1 >>= \e -> (getChar e2 >>= \f -> return (VChar $ e > f))
-eval (ELe e1 e2) = case evalType e1 of 
+eval (ELe e1 e2) = case EvalType.eval e1 of 
                       TInt -> getInt e1 >>= \e -> (getInt e2 >>= \f -> return (VInt $ e <= f))
                       TChar -> getChar e1 >>= \e -> (getChar e2 >>= \f -> return (VChar $ e <= f))
-eval (EGe e1 e2) = case evalType e1 of 
+eval (EGe e1 e2) = case EvalType.eval e1 of 
                       TInt -> getInt e1 >>= \e -> (getInt e2 >>= \f -> return (VInt $ e >= f))
                       TChar -> getChar e1 >>= \e -> (getChar e2 >>= \f -> return (VChar $ e >= f))
 
-eval (EIf e1 e2 e3) = case eval e1 of
-                        VBool True -> eval e2
-                        VBool False -> eval e3
+eval (EIf e1 e2 e3) = case EvalValue.eval e1 of
+                        VBool True -> EvalValue.eval e2
+                        VBool False -> EvalValue.eval e3
 
 evalProgram :: Program -> Maybe Value
-evalProgram (Program adts body) = evalStateT (eval body) $
+evalProgram (Program adts body) = evalStateT (EvalValue.eval body) $
   Context {  } -- 可以用某种方式定义上下文，用于记录变量绑定状态
 
 

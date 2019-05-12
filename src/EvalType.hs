@@ -65,15 +65,15 @@ eval (ESub e1 e2) = isInt2 e1 e2 >> return TInt
 eval (EMul e1 e2) = isInt2 e1 e2 >> return TInt
 eval (EDiv e1 e2) = isInt2 e1 e2 >> return TInt
 
-eval (EEq e1 e2) = isSameType e1 e2 >> return TBool
-eval (ENeq e1 e2) = isSameType e1 e2 >> return TBool
+eval (EEq e1 e2) =  return TBool
+eval (ENeq e1 e2) = return TBool
 
-eval (ELt e1 e2) = isSameType e1 e2 >> return TBool
-eval (EGt e1 e2) = isSameType e1 e2 >> return TBool
-eval (ELe e1 e2) = isSameType e1 e2 >> return TBool
-eval (EGe e1 e2) = isSameType e1 e2 >> return TBool
+eval (ELt e1 e2) = return TBool
+eval (EGt e1 e2) = return TBool
+eval (ELe e1 e2) = return TBool
+eval (EGe e1 e2) = return TBool
 
-eval (EIf e1 e2 e3) = isSameType e2 e3 >> return $ eval e2 
+eval (EIf e1 e2 e3) = EvalType.eval e2 
 
 
 evalType :: Program -> Maybe Type
