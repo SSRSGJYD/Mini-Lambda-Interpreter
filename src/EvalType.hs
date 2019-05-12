@@ -46,9 +46,10 @@ isChar e = do
     _ -> lift Nothing
 
 isSameType :: Expr -> Expr -> Bool
-isSameType e1 e2 = (et1 == et2)
-  where et1 = eval e1
-        et2 = eval e2
+isSameType = undefined
+-- isSameType e1 e2 = (et1 == et2)
+--   where et1 = eval e1
+--         et2 = eval e2
 
 eval :: Expr -> ContextState Type
 eval (EBoolLit _) = return TBool
@@ -64,7 +65,16 @@ eval (ESub e1 e2) = isInt2 e1 e2 >> return TInt
 eval (EMul e1 e2) = isInt2 e1 e2 >> return TInt
 eval (EDiv e1 e2) = isInt2 e1 e2 >> return TInt
 
--- eval (EEq e1 e2) = 
+eval (EEq e1 e2) = isSameType e1 e2 >> return TBool
+eval (ENeq e1 e2) = isSameType e1 e2 >> return TBool
+
+eval (ELt e1 e2) = isSameType e1 e2 >> return TBool
+eval (EGt e1 e2) = isSameType e1 e2 >> return TBool
+eval (ELe e1 e2) = isSameType e1 e2 >> return TBool
+eval (EGe e1 e2) = isSameType e1 e2 >> return TBool
+
+eval (EIf e1 e2 e3) = isSameType e2 e3 >> return $ eval e2 
+
 
 evalType :: Program -> Maybe Type
 evalType (Program adts body) = evalStateT (eval body) $
