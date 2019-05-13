@@ -138,6 +138,7 @@ test_bool_type_2 =
   Program [] $
   ENot (EIntLit 42)
 
+-- add, sub, mul and div 
 test_int_add_value = 
   Program [] $
   EAdd (EIntLit 1) (EIntLit 2)
@@ -154,6 +155,11 @@ test_int_div_value =
   Program [] $
   EDiv (EIntLit 5) (EIntLit 2)
 
+-- eq and neq
+test_eq_different_type = 
+  Program [] $
+  EEq (EBoolLit True) (EIntLit 1)
+
 test_bool_eq_value = 
   Program [] $
   EEq (EBoolLit True) (EBoolLit True)
@@ -166,9 +172,29 @@ test_char_eq_value =
   Program [] $
   EEq (ECharLit 'A') (ECharLit 'A')
 
+test_neq_different_type = 
+  Program [] $
+  EEq (EBoolLit True) (EIntLit 1)
+
 test_bool_neq_value = 
   Program [] $
   ENeq (EBoolLit True) (EBoolLit True)
+
+test_int_neq_value = 
+  Program [] $
+  EEq (EIntLit 12) (EIntLit 13)
+
+test_char_neq_value = 
+  Program [] $
+  EEq (ECharLit 'A') (ECharLit 'B')
+
+test_lt_different_type = 
+  Program [] $
+  ELt (EIntLit 12) (ECharLit 'A')
+
+test_lt_wrong_type = 
+  Program [] $
+  ELt (EBoolLit True) (EBoolLit True)
 
 test_int_lt_value = 
   Program [] $
@@ -202,6 +228,18 @@ test_char_ge_value =
   Program [] $
   EGe (ECharLit 'A') (ECharLit 'A')
 
+test_if_wrong_e1_type = 
+  Program [] $
+  EIf (EIntLit 1) (EIntLit 1) (EIntLit 2)
+
+test_if_different_type = 
+  Program [] $
+  EIf (EGt (EIntLit 1) (EIntLit 2)) (EIntLit 1) (EBoolLit True)
+
+test_if_value = 
+  Program [] $
+  EIf (EGt (EIntLit 1) (EIntLit 2)) (EIntLit 1) (EIntLit 2)
+
 main :: IO ()
 main = do
   putStrLn " ---------- make `stack test` looks prettier ----------"
@@ -209,11 +247,16 @@ main = do
   -- print $ EvalValue.evalValue test_bool_value -- should be: RBool True
   -- print $ EvalType.evalType test_bool_type_1 -- should be: Just TBool
   -- print $ EvalType.evalType test_bool_type_2 -- should be: Nothing
-  
+
   -- print $ EvalValue.evalValue test_int_add_value
   -- print $ EvalValue.evalValue test_int_sub_value
   -- print $ EvalValue.evalValue test_int_mul_value
   -- print $ EvalValue.evalValue test_int_div_value
+
+  -- print $ EvalType.evalType test_eq_different_type
+  -- print $ EvalValue.evalValue test_eq_different_type
+  -- print $ EvalType.evalType test_neq_different_type
+  -- print $ EvalValue.evalValue test_neq_different_type
 
   -- print $ EvalValue.evalValue test_bool_eq_value
   -- print $ EvalValue.evalValue test_int_eq_value
@@ -223,16 +266,26 @@ main = do
   -- print $ EvalValue.evalValue test_int_neq_value
   -- print $ EvalValue.evalValue test_char_neq_value
 
-  print $ EvalValue.evalValue test_int_lt_value
-  print $ EvalValue.evalValue test_char_lt_value
-  print $ EvalValue.evalValue test_int_gt_value
-  print $ EvalValue.evalValue test_char_gt_value
-  print $ EvalValue.evalValue test_int_le_value
-  print $ EvalValue.evalValue test_char_le_value
-  print $ EvalValue.evalValue test_int_ge_value
-  print $ EvalValue.evalValue test_char_ge_value
+  -- print $ EvalType.evalType test_lt_different_type
+  -- print $ EvalValue.evalValue test_lt_different_type
+  -- print $ EvalType.evalType test_lt_wrong_type
+  -- print $ EvalValue.evalValue test_lt_wrong_type
 
+  -- print $ EvalValue.evalValue test_int_lt_value
+  -- print $ EvalValue.evalValue test_char_lt_value
+  -- print $ EvalValue.evalValue test_int_gt_value
+  -- print $ EvalValue.evalValue test_char_gt_value
+  -- print $ EvalValue.evalValue test_int_le_value
+  -- print $ EvalValue.evalValue test_char_le_value
+  -- print $ EvalValue.evalValue test_int_ge_value
+  -- print $ EvalValue.evalValue test_char_ge_value
 
+  -- print $ EvalType.evalType test_if_wrong_e1_type 
+  -- print $ EvalValue.evalValue test_if_wrong_e1_type 
+  -- print $ EvalType.evalType test_if_different_type 
+  -- print $ EvalValue.evalValue test_if_different_type 
+
+  -- print $ EvalValue.evalValue test_if_value
 
   -- print $ EvalValue.evalValue test_fbi
   -- print $ EvalValue.evalValue test_sum3

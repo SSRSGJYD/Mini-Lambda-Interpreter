@@ -3,7 +3,7 @@ module EvalValue where
 
 import AST
 import Control.Monad.State
-import EvalType hiding (Context, ContextState)
+import EvalType
 
 data Value
   = VBool Bool
@@ -12,10 +12,10 @@ data Value
   -- ... more
   deriving (Show, Eq, Ord)
 
-data Context = Context { -- 可以用某种方式定义上下文，用于记录变量绑定状态
-                          } deriving (Show, Eq)
+-- data Context = Context { -- 可以用某种方式定义上下文，用于记录变量绑定状态
+--                           } deriving (Show, Eq)
 
-type ContextState a = StateT Context Maybe a
+-- type ContextState a = StateT Context Maybe a
 
 
 
@@ -67,53 +67,70 @@ eval (EDiv e1 e2) = do
   return $ (VInt $ (ev1 `div` ev2))
 
 eval (EEq e1 e2) = do
+  sameType <- EvalType.isSameType e1 e2
   ev1 <- EvalValue.eval e1
   ev2 <- EvalValue.eval e2
-  case ev1 of 
-    VBool _ -> return (VBool $ ev1 == ev2)
-    VInt _ -> return (VBool $ ev1 == ev2)
-    VChar _ -> return (VBool $ ev1 == ev2)
+  case sameType of 
+    True -> return (VBool $ ev1 == ev2)
+    False -> lift Nothing
 
 eval (ENeq e1 e2) = do
+  sameType <- EvalType.isSameType e1 e2
   ev1 <- EvalValue.eval e1
   ev2 <- EvalValue.eval e2
-  case ev1 of 
-    VBool _ -> return (VBool $ ev1 /= ev2)
-    VInt _ -> return (VBool $ ev1 /= ev2)
-    VChar _ -> return (VBool $ ev1 /= ev2)
+  case sameType of 
+    True -> return (VBool $ ev1 /= ev2)
+    False -> lift Nothing
 
 eval (ELt e1 e2) = do
+  sameType <- EvalType.isSameType e1 e2
+  comparable <- EvalType.isComparableType e1
   ev1 <- EvalValue.eval e1
   ev2 <- EvalValue.eval e2
-  case ev1 of 
-    VInt _ -> return (VBool $ ev1 < ev2)
-    VChar _ -> return (VBool $ ev1 < ev2)
+  case sameType && comparable of 
+    True -> return (VBool $ ev1 < ev2)
+    False -> lift Nothing
 
 eval (EGt e1 e2) = do
+  sameType <- EvalType.isSameType e1 e2
+  comparable <- EvalType.isComparableType e1
   ev1 <- EvalValue.eval e1
   ev2 <- EvalValue.eval e2
-  case ev1 of 
-    VInt _ -> return (VBool $ ev1 > ev2)
-    VChar _ -> return (VBool $ ev1 > ev2)
+  case sameType && comparable of 
+    True -> return (VBool $ ev1 > ev2)
+    False -> lift Nothing
 
 eval (ELe e1 e2) = do
+  sameType <- EvalType.isSameType e1 e2
+  comparable <- EvalType.isComparableType e1
   ev1 <- EvalValue.eval e1
   ev2 <- EvalValue.eval e2
-  case ev1 of 
-    VInt _ -> return (VBool $ ev1 <= ev2)
-    VChar _ -> return (VBool $ ev1 <= ev2)
+  case sameType && comparable of 
+    True -> return (VBool $ ev1 <= ev2)
+    False -> lift Nothing
 
 eval (EGe e1 e2) = do
+  sameType <- EvalType.isSameType e1 e2
+  comparable <- EvalType.isComparableType e1
   ev1 <- EvalValue.eval e1
   ev2 <- EvalValue.eval e2
-  case ev1 of 
-    VInt _ -> return (VBool $ ev1 >= ev2)
-    VChar _ -> return (VBool $ ev1 >= ev2)
+  case sameType && comparable of 
+    True -> return (VBool $ ev1 >= ev2)
+    False -> lift Nothing
     
+eval (EIf e1 e2 e3) = do
+  et <- EvalType.eval e1
+  sameType <- EvalType.isSameType e2 e3
+  case et of
+    TBool -> if sameType
+             then do 
+                ev1 <- EvalValue.eval e1
+                case ev1 of
+                  VBool True -> EvalValue.eval e2
+                  VBool False -> EvalValue.eval e3
+             else lift Nothing
+    _ -> lift Nothing
 
--- eval (EIf e1 e2 e3) = case EvalValue.eval e1 of
---                         VBool True -> EvalValue.eval e2
---                         VBool False -> EvalValue.eval e3
 
 evalProgram :: Program -> Maybe Value
 evalProgram (Program adts body) = evalStateT (EvalValue.eval body) $
