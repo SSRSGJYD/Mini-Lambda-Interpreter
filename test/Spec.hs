@@ -138,26 +138,114 @@ test_bool_type_2 =
   Program [] $
   ENot (EIntLit 42)
 
+test_int_add_value = 
+  Program [] $
+  EAdd (EIntLit 1) (EIntLit 2)
+
+test_int_sub_value = 
+  Program [] $
+  ESub (EIntLit 2) (EIntLit 1)
+
+test_int_mul_value = 
+  Program [] $
+  EMul (EIntLit 2) (EIntLit 3)
+
+test_int_div_value = 
+  Program [] $
+  EDiv (EIntLit 5) (EIntLit 2)
+
+test_bool_eq_value = 
+  Program [] $
+  EEq (EBoolLit True) (EBoolLit True)
+
+test_int_eq_value = 
+  Program [] $
+  EEq (EIntLit 12) (EIntLit 12)
+
+test_char_eq_value = 
+  Program [] $
+  EEq (ECharLit 'A') (ECharLit 'A')
+
+test_bool_neq_value = 
+  Program [] $
+  ENeq (EBoolLit True) (EBoolLit True)
+
+test_int_lt_value = 
+  Program [] $
+  ELt (EIntLit 12) (EIntLit 10)
+
+test_char_lt_value = 
+  Program [] $
+  ELt (ECharLit 'B') (ECharLit 'A')
+
+test_int_gt_value = 
+  Program [] $
+  EGt (EIntLit 12) (EIntLit 12)
+
+test_char_gt_value = 
+  Program [] $
+  EGt (ECharLit 'A') (ECharLit 'A')
+
+test_int_le_value = 
+  Program [] $
+  ELe (EIntLit 12) (EIntLit 12)
+
+test_char_le_value = 
+  Program [] $
+  ELe (ECharLit 'A') (ECharLit 'A')
+
+test_int_ge_value = 
+  Program [] $
+  EGe (EIntLit 12) (EIntLit 12)
+
+test_char_ge_value = 
+  Program [] $
+  EGe (ECharLit 'A') (ECharLit 'A')
 
 main :: IO ()
 main = do
   putStrLn " ---------- make `stack test` looks prettier ----------"
-  print $ EvalValue.evalValue test_bool_value -- should be: RBool True
-  print $ EvalType.evalType test_bool_type_1 -- should be: Just TBool
-  print $ EvalType.evalType test_bool_type_2 -- should be: Nothing
   
-  print $ EvalValue.evalValue test_fbi
-  print $ EvalValue.evalValue test_sum3
-  print $ EvalValue.evalValue test_adt_ctor
-  print $ EvalValue.evalValue test_adt_case
-  print $ EvalValue.evalProgram test_adt_list
-  print $ EvalValue.evalProgram test_adt_list_range
-  print $ EvalValue.evalValue test_adt_list_sum
-  print $ EvalType.evalType test_fbi
-  print $ EvalType.evalType test_sum3
-  print $ EvalType.evalType test_adt_ctor
-  print $ EvalType.evalType test_adt_case
-  print $ EvalType.evalType test_adt_list
-  print $ EvalType.evalType test_adt_list_range
-  print $ EvalType.evalType test_adt_list_sum
-  print $ EvalType.evalType test_type
+  -- print $ EvalValue.evalValue test_bool_value -- should be: RBool True
+  -- print $ EvalType.evalType test_bool_type_1 -- should be: Just TBool
+  -- print $ EvalType.evalType test_bool_type_2 -- should be: Nothing
+  
+  -- print $ EvalValue.evalValue test_int_add_value
+  -- print $ EvalValue.evalValue test_int_sub_value
+  -- print $ EvalValue.evalValue test_int_mul_value
+  -- print $ EvalValue.evalValue test_int_div_value
+
+  -- print $ EvalValue.evalValue test_bool_eq_value
+  -- print $ EvalValue.evalValue test_int_eq_value
+  -- print $ EvalValue.evalValue test_char_eq_value
+
+  -- print $ EvalValue.evalValue test_bool_neq_value
+  -- print $ EvalValue.evalValue test_int_neq_value
+  -- print $ EvalValue.evalValue test_char_neq_value
+
+  print $ EvalValue.evalValue test_int_lt_value
+  print $ EvalValue.evalValue test_char_lt_value
+  print $ EvalValue.evalValue test_int_gt_value
+  print $ EvalValue.evalValue test_char_gt_value
+  print $ EvalValue.evalValue test_int_le_value
+  print $ EvalValue.evalValue test_char_le_value
+  print $ EvalValue.evalValue test_int_ge_value
+  print $ EvalValue.evalValue test_char_ge_value
+
+
+
+  -- print $ EvalValue.evalValue test_fbi
+  -- print $ EvalValue.evalValue test_sum3
+  -- print $ EvalValue.evalValue test_adt_ctor
+  -- print $ EvalValue.evalValue test_adt_case
+  -- print $ EvalValue.evalProgram test_adt_list
+  -- print $ EvalValue.evalProgram test_adt_list_range
+  -- print $ EvalValue.evalValue test_adt_list_sum
+  -- print $ EvalType.evalType test_fbi
+  -- print $ EvalType.evalType test_sum3
+  -- print $ EvalType.evalType test_adt_ctor
+  -- print $ EvalType.evalType test_adt_case
+  -- print $ EvalType.evalType test_adt_list
+  -- print $ EvalType.evalType test_adt_list_range
+  -- print $ EvalType.evalType test_adt_list_sum
+  -- print $ EvalType.evalType test_type
