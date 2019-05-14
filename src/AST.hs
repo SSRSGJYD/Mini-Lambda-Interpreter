@@ -5,7 +5,8 @@ module AST
   , Expr (..)
   , ADT (..)
   , Program (..)
-  , Result (..) ) where
+  , Result (..)
+  , Value (..) ) where
 
 
 -- |类型(type)，包括基本数据类型、函数类型以及代数数据类型。
@@ -149,3 +150,12 @@ data Result
   -- ^不合法的求值结果，包括求值发生错误以及非布尔类型、有限精度整数类型、字符类型的求值结果。
 
   deriving (Show, Eq)
+
+
+data Value
+
+  = VBool Bool
+  | VInt Int
+  | VChar Char
+  -- ... more
+  deriving (Show, Eq, Ord)

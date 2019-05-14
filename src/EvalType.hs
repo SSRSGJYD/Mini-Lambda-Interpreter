@@ -3,9 +3,12 @@ module EvalType where
 
 import AST
 import Control.Monad.State
+import qualified Data.Map as Map
 
 data Context = Context { -- 可以用某种方式定义上下文，用于记录变量绑定状态
-                       }
+  definition :: Map.Map String (Type, Expr),
+  value :: Map.Map String (Type, Value)
+}
   deriving (Show, Eq)
 
 type ContextState a = StateT Context Maybe a
@@ -116,9 +119,12 @@ eval (EIf e1 e2 e3) = do
     TBool -> if sameType then eval e2 else lift Nothing
     _ -> lift Nothing
 
-    
+eval (ELambda (str, t1) e) = do
+  t2 <- eval e
+  return $ TArrow t1 t2
+
 eval _ = lift Nothing
 
 evalType :: Program -> Maybe Type
 evalType (Program adts body) = evalStateT (eval body) $
-  Context {  } -- 可以用某种方式定义上下文，用于记录变量绑定状态
+  Context { definition = Map.empty, value = Map.empty } -- 可以用某种方式定义上下文，用于记录变量绑定状态

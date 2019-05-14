@@ -4,24 +4,14 @@ module EvalValue where
 import AST
 import Control.Monad.State
 import EvalType
+import qualified Data.Map as Map
 
-data Value
-  = VBool Bool
-  | VInt Int
-  | VChar Char
-  -- ... more
-  deriving (Show, Eq, Ord)
 
 -- data Context = Context { -- 可以用某种方式定义上下文，用于记录变量绑定状态
 --                           } deriving (Show, Eq)
 
 -- type ContextState a = StateT Context Maybe a
 
-
-
--- for debugging
--- showContextState :: ContextState a -> String
--- showContextState (StateT context) = "context:" ++ show context
 
 getBool :: Expr -> ContextState Bool
 getBool e = do
@@ -134,7 +124,7 @@ eval (EIf e1 e2 e3) = do
 
 evalProgram :: Program -> Maybe Value
 evalProgram (Program adts body) = evalStateT (EvalValue.eval body) $
-  Context {  } -- 可以用某种方式定义上下文，用于记录变量绑定状态
+  Context { definition = Map.empty, value = Map.empty } -- 可以用某种方式定义上下文，用于记录变量绑定状态
 
 
 evalValue :: Program -> Result
