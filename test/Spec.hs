@@ -240,6 +240,10 @@ test_if_value =
   Program [] $
   EIf (EGt (EIntLit 1) (EIntLit 2)) (EIntLit 1) (EIntLit 2)
 
+test_lambda = 
+  Program [] $
+  ELambda ("x", TInt) (EAdd (EIntLit 1) (EVar "x"))
+
 main :: IO ()
 main = do
   putStrLn " ---------- make `stack test` looks prettier ----------"
@@ -284,8 +288,9 @@ main = do
   -- print $ EvalValue.evalValue test_if_wrong_e1_type 
   -- print $ EvalType.evalType test_if_different_type 
   -- print $ EvalValue.evalValue test_if_different_type 
-
   -- print $ EvalValue.evalValue test_if_value
+
+  print $ EvalType.evalType test_lambda
 
   -- print $ EvalValue.evalValue test_fbi
   -- print $ EvalValue.evalValue test_sum3
