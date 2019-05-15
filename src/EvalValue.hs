@@ -125,6 +125,42 @@ eval (EIf e1 e2 e3) = do
              else lift Nothing
     _ -> lift Nothing
 
+-- Lambda 表达式无法单独求值
+
+eval (ELet (varname, e1) e2) = do
+  modify (insertExpr varname e1)
+  t <- EvalValue.eval e2
+  modify (deleteExpr varname)
+  return t
+
+eval (ELetRec funcname (argname,argtype) (funcExpr, returntype) expr) = do
+  modify (insertExpr funcname (ELambda (argname, argtype) funcExpr))
+  t <- EvalValue.eval expr
+  modify (deleteExpr funcname)
+  return t
+
+eval (EVar varname) = do
+  context <- get
+  case lookupExpr context varname of 
+    Just e -> EvalValue.eval e
+    Nothing -> lift Nothing
+
+eval (EApply e1 e2) = do
+  et1 <- EvalType.eval e1
+  et2 <- EvalType.eval e2
+  case et1 of 
+    TArrow t1 t2 -> if et2 == t1 
+                    then
+                      case e1 of 
+                        ELambda (varname, _) e -> EvalValue.eval $ ELet (varname, e2) e
+                        EVar funcname -> do
+                          context <- get
+                          case lookupExpr context funcname of
+                            Just funcexpr -> EvalValue.eval (EApply funcexpr e2)
+                            _ -> lift Nothing
+                        _ -> lift Nothing
+                    else lift Nothing
+    _ -> lift Nothing
 
 evalProgram :: Program -> Maybe Value
 evalProgram (Program adts body) = evalStateT (EvalValue.eval body) $

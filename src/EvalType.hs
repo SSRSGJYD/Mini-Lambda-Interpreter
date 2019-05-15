@@ -113,18 +113,38 @@ eval (EIf e1 e2 e3) = do
     TBool -> if sameType then eval e2 else lift Nothing
     _ -> lift Nothing
 
-eval (ELambda (str, t1) e) = do
-  modify (insertType str t1)
+eval (ELambda (varname, t1) e) = do
+  modify (insertType varname t1)
   t2 <- eval e
-  modify (deleteType str)
+  modify (deleteType varname)
   return $ TArrow t1 t2
 
+eval (ELet (varname, e1) e2) = do
+  modify (insertExpr varname e1)
+  t <- eval e2
+  modify (deleteExpr varname)
+  return t
+
+eval (ELetRec funcname (argname,argtype) (funcExpr, returntype) expr) = do
+  modify (insertExpr funcname (ELambda (argname, argtype) funcExpr))
+  t <- eval expr
+  modify (deleteExpr funcname)
+  return t
 
 eval (EVar varname) = do
   context <- get
   case lookupType context varname of 
     Just t -> return t
-    Nothing -> lift Nothing
+    Nothing -> case lookupExpr context varname of 
+                  Just e -> eval e
+                  Nothing -> lift Nothing
+
+eval (EApply e1 e2) = do
+  et1 <- eval e1
+  et2 <- eval e2
+  case et1 of 
+    TArrow t1 t2 -> if et2 == t1 then return t2 else lift Nothing
+    _ -> lift Nothing
 
 eval _ = lift Nothing
 

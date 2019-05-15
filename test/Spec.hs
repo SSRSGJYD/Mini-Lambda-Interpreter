@@ -240,9 +240,25 @@ test_if_value =
   Program [] $
   EIf (EGt (EIntLit 1) (EIntLit 2)) (EIntLit 1) (EIntLit 2)
 
-test_lambda = 
+test_lambda_type = 
   Program [] $
   ELambda ("x", TInt) (EAdd (EIntLit 1) (EVar "x"))
+
+test_let = 
+  Program [] $
+  ELet ("x", EIntLit 1) (EAdd (EIntLit 1) (EVar "x"))
+
+test_nested_let = 
+  Program [] $
+  ELet ("y", EIntLit 2) (ELet ("x", EIntLit 1) (EEq (EVar "y") (EVar "x")))
+
+test_apply_lambda = 
+  Program [] $
+  EApply (ELambda ("x", TInt) (EAdd (EIntLit 1) (EVar "x"))) (EIntLit 2)
+
+test_letrec =
+  Program [] $
+  ELetRec "func" ("x", TInt) (EAdd (EIntLit 1) (EVar "x"), TInt) (EApply (EVar "func") (EIntLit 2))
 
 main :: IO ()
 main = do
@@ -290,7 +306,18 @@ main = do
   -- print $ EvalValue.evalValue test_if_different_type 
   -- print $ EvalValue.evalValue test_if_value
 
-  print $ EvalType.evalType test_lambda
+  -- print $ EvalType.evalType test_lambda_type
+
+  -- print $ EvalType.evalType test_let
+  -- print $ EvalValue.evalValue test_let
+  -- print $ EvalType.evalType test_nested_let
+  -- print $ EvalValue.evalValue test_nested_let
+
+  -- print $ EvalType.evalType test_apply_lambda
+  -- print $ EvalValue.evalValue test_apply_lambda
+
+  print $ EvalType.evalType test_letrec
+  print $ EvalValue.evalValue test_letrec
 
   -- print $ EvalValue.evalValue test_fbi
   -- print $ EvalValue.evalValue test_sum3

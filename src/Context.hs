@@ -6,7 +6,7 @@ import qualified Data.Map as Map
 
 data Context = Context { -- 可以用某种方式定义上下文，用于记录变量绑定状态
     typeMap :: Map.Map String (Type), -- 类型信,用于EvalType
-    exprMap :: Map.Map String (Type, Expr) -- 表达式绑定,用于EvalValue
+    exprMap :: Map.Map String (Expr) -- 表达式绑定,用于EvalValue
 }
   deriving (Show, Eq)
 
@@ -27,3 +27,12 @@ deleteType varname (Context typeMap exprMap) = Context (Map.delete varname typeM
 
 containExpr :: Context -> String -> Bool
 containExpr context varname = Map.member varname (exprMap context)
+
+lookupExpr :: Context -> String -> Maybe Expr
+lookupExpr context varname = Map.lookup varname (exprMap context)
+
+insertExpr :: String -> Expr -> Context -> Context
+insertExpr varname expr (Context typeMap exprMap) = Context typeMap (Map.insert varname expr exprMap)
+
+deleteExpr :: String -> Context -> Context
+deleteExpr varname (Context typeMap exprMap) = Context typeMap (Map.delete varname exprMap)
