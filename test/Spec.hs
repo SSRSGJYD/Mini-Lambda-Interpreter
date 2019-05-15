@@ -260,6 +260,10 @@ test_letrec =
   Program [] $
   ELetRec "func" ("x", TInt) (EAdd (EIntLit 1) (EVar "x"), TInt) (EApply (EVar "func") (EIntLit 2))
 
+test_letrec_recursive = 
+  Program [] $
+  ELetRec "func" ("x", TInt) (EAdd (EIntLit 1) (EVar "x"), TInt) (EApply (EVar "func") (EApply (EVar "func") (EIntLit 2)))
+
 main :: IO ()
 main = do
   putStrLn " ---------- make `stack test` looks prettier ----------"
@@ -318,6 +322,8 @@ main = do
 
   print $ EvalType.evalType test_letrec
   print $ EvalValue.evalValue test_letrec
+  print $ EvalType.evalType test_letrec_recursive
+  print $ EvalValue.evalValue test_letrec_recursive
 
   -- print $ EvalValue.evalValue test_fbi
   -- print $ EvalValue.evalValue test_sum3

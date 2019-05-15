@@ -162,6 +162,18 @@ eval (EApply e1 e2) = do
                     else lift Nothing
     _ -> lift Nothing
 
+eval (ECase e list) = do
+  et <- EvalType.eval e
+  case list of
+    (p : ps) -> if matchPattern (fst p) et 
+                then do
+                  modify (bindPattern (fst p) e)
+                  EvalValue.eval (snd p)
+                  modify (unbindPattern (fst p))
+                else
+                  EvalValue.eval (ECase e ps)
+    _ -> lift Nothing
+
 evalProgram :: Program -> Maybe Value
 evalProgram (Program adts body) = evalStateT (EvalValue.eval body) $
   Context { typeMap = Map.empty, exprMap = Map.empty } -- 可以用某种方式定义上下文，用于记录变量绑定状态

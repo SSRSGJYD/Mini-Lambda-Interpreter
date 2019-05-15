@@ -146,6 +146,11 @@ eval (EApply e1 e2) = do
     TArrow t1 t2 -> if et2 == t1 then return t2 else lift Nothing
     _ -> lift Nothing
 
+eval (ECase e list) = do
+  case list of
+    (x : xs) -> eval $ snd x
+    _ -> lift Nothing
+
 eval _ = lift Nothing
 
 evalType :: Program -> Maybe Type
