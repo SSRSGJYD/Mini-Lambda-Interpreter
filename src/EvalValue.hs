@@ -6,6 +6,7 @@ import Context
 import Control.Monad.State
 import EvalType
 import qualified Data.Map as Map
+import Debug.Trace
 
 
 data Value
@@ -113,27 +114,35 @@ eval (EGe e1 e2) = do
     False -> lift Nothing
     
 eval (EIf e1 e2 e3) = do
-  et <- EvalType.eval e1
-  sameType <- EvalType.isSameType e2 e3
-  case et of
-    TBool -> if sameType
-             then do 
-                ev1 <- EvalValue.eval e1
-                case ev1 of
-                  VBool True -> EvalValue.eval e2
-                  VBool False -> EvalValue.eval e3
-             else lift Nothing
-    _ -> lift Nothing
+  ev1 <- EvalValue.eval e1
+  case ev1 of
+    VBool True -> trace ("if condition true, expr:" ++ (show e2)) EvalValue.eval e2
+    VBool False -> trace ("if condition false, expr:" ++ (show e3)) EvalValue.eval e3
+  -- et <- EvalType.eval e1
+  -- sameType <- EvalType.isSameType e2 e3
+  -- case et of
+  --   TBool -> if sameType
+  --            then do 
+  --               ev1 <- EvalValue.eval e1
+  --               case ev1 of
+  --                 VBool True -> trace ("if condition true, expr:" ++ (show e2)) EvalValue.eval e2
+  --                 VBool False -> trace ("if condition false, expr:" ++ (show e3)) EvalValue.eval e3
+  --            else lift Nothing
+  --   _ -> lift Nothing
 
 -- Lambda
-eval (ELambda (varname, _) e) = do
+eval (ELambda (varname, vartype) e) = do
   context <- get
+  trace ("eval lambda expr: \\" ++ varname ++ " -> " ++ show e) lift Nothing
   if emptyArg context
   then lift Nothing
   else
     let e' = firstArg context in do
       modify popArg
-      EvalValue.eval $ ELet (varname, e') e
+      modify (insertType varname vartype)
+      result <- EvalValue.eval $ ELet (varname, e') e
+      modify (deleteType varname)
+      return result
 
 eval (ELet (varname, e1) e2) = do
   modify (insertExpr varname e1)
@@ -243,7 +252,8 @@ evalProgram (Program adts body) = evalStateT (EvalValue.eval body) $
   Context { adtMap = initAdtMap adts, 
             typeMap = Map.empty, 
             exprMap = Map.empty,
-            argList = [] } -- 可以用某种方式定义上下文，用于记录变量绑定状态
+            argList = [],
+            logList = ["start EvalValue Program"] } -- 可以用某种方式定义上下文，用于记录变量绑定状态
 
 
 evalValue :: Program -> Result
@@ -252,3 +262,17 @@ evalValue p = case evalProgram p of
   Just (VInt i) -> RInt i
   Just (VChar c) -> RChar c
   _ -> RInvalid
+
+
+printStateLogs :: Program -> IO ()
+printStateLogs (Program adts body) = 
+  let ms = execStateT (EvalValue.eval body) $
+            Context { adtMap = initAdtMap adts, 
+                      typeMap = Map.empty, 
+                      exprMap = Map.empty,
+                      argList = [],
+                      logList = ["start EvalValue Program"] }
+  in case ms of 
+      Just context -> do 
+                        printLogs context
+      _ -> putStrLn "EvalValue.eval failed"

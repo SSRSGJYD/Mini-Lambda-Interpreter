@@ -296,7 +296,6 @@ test_case_var =
   ECase (EIntLit 1) [(PBoolLit True, EIntLit 1), (PVar "x", EAdd (EVar "x") (EIntLit 1))]
 
 
-
 main :: IO ()
 main = do
   putStrLn " ---------- make `stack test` looks prettier ----------"
@@ -368,9 +367,18 @@ main = do
   -- print $ EvalType.evalType test_case_char
   -- print $ EvalValue.evalValue test_case_char
   -- print $ EvalType.evalType test_case_var
-  -- print $ EvalValue.evalValue test_case_var
+  print $ EvalValue.evalValue test_case_var
 
-  print $ EvalValue.evalValue test_fbi
+  -- print $ makeFun ("fbi", TInt) [("x", TInt)] (
+  --   EIf (ELe (EVar "x") (EIntLit 1))
+  --     (EIntLit 1)
+  --     (EAdd
+  --       (EApply (EVar "fbi") (ESub (EVar "x") (EIntLit 1)))
+  --       (EApply (EVar "fbi") (ESub (EVar "x") (EIntLit 2))))
+  --   ) $
+  --   callFun (EVar "fbi") [EIntLit 10]
+
+  -- print $ EvalValue.evalValue test_fbi
   -- print $ EvalValue.evalValue test_sum3
   -- print $ EvalValue.evalValue test_adt_ctor
   -- print $ EvalValue.evalValue test_adt_case
