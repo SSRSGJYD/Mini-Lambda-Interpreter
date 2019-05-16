@@ -36,28 +36,3 @@ insertExpr varname expr (Context typeMap exprMap) = Context typeMap (Map.insert 
 
 deleteExpr :: String -> Context -> Context
 deleteExpr varname (Context typeMap exprMap) = Context typeMap (Map.delete varname exprMap)
-
-matchPatterns :: [Pattern] -> [Type] -> Bool
-matchPatterns ps ts
-  | [] [] = True
-  | _ [] = False
-  | [] _ = False
-  | (p:ps') (t:ts') = if matchPattern p t then matchPatterns ps' ts' else False
-    
-
-matchPattern :: Pattern -> Type -> Bool
-matchPattern p t = case p of
-  PBoolLit _ -> Type == TBool
-  PIntLit _ -> Type == TInt
-  PCharLit _ -> Type == TChar
-  PVar _ -> True
-  PData adtname -> case t of
-                     TData str -> adtname == str
-                     _ -> False
-  _ -> False 
-
-bindPattern :: Pattern -> Expr -> Context -> Context
-bindPattern = undefined
-
-unbindPattern :: Pattern -> Context -> Context
-unbindPattern = undefined

@@ -163,16 +163,49 @@ eval (EApply e1 e2) = do
     _ -> lift Nothing
 
 eval (ECase e list) = do
-  et <- EvalType.eval e
   case list of
-    (p : ps) -> if matchPattern (fst p) et 
-                then do
-                  modify (bindPattern (fst p) e)
-                  EvalValue.eval (snd p)
-                  modify (unbindPattern (fst p))
-                else
-                  EvalValue.eval (ECase e ps)
+    (p : ps) -> do 
+                  ebool <- matchPattern (fst p) e
+                  if ebool
+                  then do
+                    modify (bindPattern (fst p) e)
+                    ev <- EvalValue.eval (snd p)
+                    modify (unbindPattern (fst p))
+                    return ev
+                  else
+                    EvalValue.eval (ECase e ps)
     _ -> lift Nothing
+
+
+matchPatterns :: [Pattern] -> [Expr] -> ContextState Bool
+matchPatterns [] [] = return True
+matchPatterns _ [] = return False
+matchPatterns [] _ = return False
+matchPatterns (p:ps') (e:es') = do
+  ebool <- matchPattern p e
+  if ebool
+  then matchPatterns ps' es' 
+  else return False
+    
+
+matchPattern :: Pattern -> Expr -> ContextState Bool
+matchPattern p e = do
+  ev <- EvalValue.eval e
+  case p of
+    PBoolLit x -> return $ ev == VBool x
+    PIntLit x -> return $ ev == VInt x
+    PCharLit x -> return $ ev == VChar x
+    PVar _ -> return $ True
+    -- PData adtname patterns -> case e of
+    --                     TData str -> adtname == str
+    --                     _ -> False
+    _ -> return $ False 
+
+bindPattern :: Pattern -> Expr -> Context -> Context
+bindPattern = undefined
+
+unbindPattern :: Pattern -> Context -> Context
+unbindPattern = undefined
 
 evalProgram :: Program -> Maybe Value
 evalProgram (Program adts body) = evalStateT (EvalValue.eval body) $

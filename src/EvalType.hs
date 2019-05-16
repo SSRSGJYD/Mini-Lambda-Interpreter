@@ -151,6 +151,7 @@ eval (ECase e list) = do
     (x : xs) -> eval $ snd x
     _ -> lift Nothing
 
+
 eval _ = lift Nothing
 
 evalType :: Program -> Maybe Type
