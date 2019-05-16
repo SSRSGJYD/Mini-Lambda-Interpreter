@@ -188,6 +188,7 @@ test_char_neq_value =
   Program [] $
   EEq (ECharLit 'A') (ECharLit 'B')
 
+-- compare: gt, lt, ge and le
 test_lt_different_type = 
   Program [] $
   ELt (EIntLit 12) (ECharLit 'A')
@@ -228,6 +229,7 @@ test_char_ge_value =
   Program [] $
   EGe (ECharLit 'A') (ECharLit 'A')
 
+-- if
 test_if_wrong_e1_type = 
   Program [] $
   EIf (EIntLit 1) (EIntLit 1) (EIntLit 2)
@@ -240,10 +242,12 @@ test_if_value =
   Program [] $
   EIf (EGt (EIntLit 1) (EIntLit 2)) (EIntLit 1) (EIntLit 2)
 
+-- lambda expression
 test_lambda_type = 
   Program [] $
   ELambda ("x", TInt) (EAdd (EIntLit 1) (EVar "x"))
 
+-- let
 test_let = 
   Program [] $
   ELet ("x", EIntLit 1) (EAdd (EIntLit 1) (EVar "x"))
@@ -252,10 +256,16 @@ test_nested_let =
   Program [] $
   ELet ("y", EIntLit 2) (ELet ("x", EIntLit 1) (EEq (EVar "y") (EVar "x")))
 
+-- apply
 test_apply_lambda = 
   Program [] $
   EApply (ELambda ("x", TInt) (EAdd (EIntLit 1) (EVar "x"))) (EIntLit 2)
 
+test_nested_lambda = 
+  Program [] $
+  EApply (EApply (ELambda ("y", TInt) (ELambda ("x", TInt) (EAdd (EVar "y") (EVar "x")))) (EIntLit 1)) (EIntLit 2)
+
+-- letrec
 test_letrec =
   Program [] $
   ELetRec "func" ("x", TInt) (EAdd (EIntLit 1) (EVar "x"), TInt) (EApply (EVar "func") (EIntLit 2))
@@ -264,6 +274,11 @@ test_letrec_recursive =
   Program [] $
   ELetRec "func" ("x", TInt) (EAdd (EIntLit 1) (EVar "x"), TInt) (EApply (EVar "func") (EApply (EVar "func") (EIntLit 2)))
 
+test_letrec_multi_args = 
+  Program [] $
+  ELetRec "sum" ("x",TInt) (ELambda ("y",TInt) (EAdd (EVar "x") (EVar "y")),TArrow TInt TInt) (EApply (EApply (EVar "sum") (EIntLit 1)) (EIntLit 2))
+
+  -- case
 test_case_bool = 
   Program [] $
   ECase (EGt (EIntLit 2) (EIntLit 1)) [(PBoolLit True, EIntLit 2), (PBoolLit False, EIntLit 1)]
@@ -279,6 +294,8 @@ test_case_char =
 test_case_var = 
   Program [] $
   ECase (EIntLit 1) [(PBoolLit True, EIntLit 1), (PVar "x", EAdd (EVar "x") (EIntLit 1))]
+
+
 
 main :: IO ()
 main = do
@@ -335,11 +352,14 @@ main = do
 
   -- print $ EvalType.evalType test_apply_lambda
   -- print $ EvalValue.evalValue test_apply_lambda
+  print $ EvalType.evalType test_nested_lambda
+  print $ EvalValue.evalValue test_nested_lambda
 
   -- print $ EvalType.evalType test_letrec
   -- print $ EvalValue.evalValue test_letrec
   -- print $ EvalType.evalType test_letrec_recursive
   -- print $ EvalValue.evalValue test_letrec_recursive
+  -- print $ EvalValue.evalValue test_letrec_multi_args
   
   -- print $ EvalType.evalType test_case_bool
   -- print $ EvalValue.evalValue test_case_bool
@@ -349,7 +369,6 @@ main = do
   -- print $ EvalValue.evalValue test_case_char
   -- print $ EvalType.evalType test_case_var
   -- print $ EvalValue.evalValue test_case_var
-  
 
   -- print $ EvalValue.evalValue test_fbi
   -- print $ EvalValue.evalValue test_sum3

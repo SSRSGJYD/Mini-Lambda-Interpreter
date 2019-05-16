@@ -187,7 +187,6 @@ matchPatterns (p:ps') (e:es') = do
   then matchPatterns ps' es' 
   else return False
     
-
 matchPattern :: Pattern -> Expr -> ContextState Bool
 matchPattern p e = do
   ev <- EvalValue.eval e
@@ -196,10 +195,17 @@ matchPattern p e = do
     PIntLit x -> return $ ev == VInt x
     PCharLit x -> return $ ev == VChar x
     PVar varname -> return $ True
-    -- PData adtname patterns -> case e of
-    --                     TData str -> adtname == str
-    --                     _ -> False
-    _ -> return $ False 
+    PData constructor [] -> case e of
+                              EVar funcname -> return $ constructor == funcname
+                              _ -> return False
+    PData constructor patterns -> case e of
+                        EApply efunc earg -> do 
+                                              ebool <- matchPattern (last patterns) earg
+                                              if ebool
+                                              then matchPattern (PData constructor $ init patterns) efunc
+                                              else return False 
+                        _ -> return False
+    _ -> return False 
 
 bindPattern :: Pattern -> Expr -> Context -> Context
 bindPattern p e context = 
@@ -208,9 +214,11 @@ bindPattern p e context =
     PIntLit x -> context
     PCharLit x -> context
     PVar varname -> insertExpr varname e context
-    -- PData adtname patterns -> case e of
-    --                     TData str -> adtname == str
-    --                     _ -> False
+    PData constructor [] -> context
+    PData constructor patterns -> case e of
+      EApply efunc earg -> let context' = bindPattern (last patterns) earg context
+                           in bindPattern (PData constructor $ init patterns) efunc context'
+      _ -> context
     _ -> context
 
 unbindPattern :: Pattern -> Context -> Context
@@ -220,9 +228,9 @@ unbindPattern p context =
     PIntLit x -> context
     PCharLit x -> context
     PVar varname -> deleteExpr varname context
-    -- PData adtname patterns -> case e of
-    --                     TData str -> adtname == str
-    --                     _ -> False
+    PData constructor [] -> context
+    PData constructor patterns -> let context' = unbindPattern (last patterns) context
+                                  in unbindPattern (PData constructor $ init patterns) context'
     _ -> context
 
 
