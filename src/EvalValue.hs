@@ -195,17 +195,35 @@ matchPattern p e = do
     PBoolLit x -> return $ ev == VBool x
     PIntLit x -> return $ ev == VInt x
     PCharLit x -> return $ ev == VChar x
-    PVar _ -> return $ True
+    PVar varname -> return $ True
     -- PData adtname patterns -> case e of
     --                     TData str -> adtname == str
     --                     _ -> False
     _ -> return $ False 
 
 bindPattern :: Pattern -> Expr -> Context -> Context
-bindPattern = undefined
+bindPattern p e context = 
+  case p of
+    PBoolLit x -> context
+    PIntLit x -> context
+    PCharLit x -> context
+    PVar varname -> insertExpr varname e context
+    -- PData adtname patterns -> case e of
+    --                     TData str -> adtname == str
+    --                     _ -> False
+    _ -> context
 
 unbindPattern :: Pattern -> Context -> Context
-unbindPattern = undefined
+unbindPattern p context = 
+  case p of
+    PBoolLit x -> context
+    PIntLit x -> context
+    PCharLit x -> context
+    PVar varname -> deleteExpr varname context
+    -- PData adtname patterns -> case e of
+    --                     TData str -> adtname == str
+    --                     _ -> False
+    _ -> context
 
 evalProgram :: Program -> Maybe Value
 evalProgram (Program adts body) = evalStateT (EvalValue.eval body) $

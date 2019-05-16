@@ -264,10 +264,22 @@ test_letrec_recursive =
   Program [] $
   ELetRec "func" ("x", TInt) (EAdd (EIntLit 1) (EVar "x"), TInt) (EApply (EVar "func") (EApply (EVar "func") (EIntLit 2)))
 
-test_case = 
+test_case_bool = 
   Program [] $
   ECase (EGt (EIntLit 2) (EIntLit 1)) [(PBoolLit True, EIntLit 2), (PBoolLit False, EIntLit 1)]
-  
+
+test_case_int = 
+  Program [] $
+  ECase (EAdd (EIntLit 2) (EIntLit 1)) [(PBoolLit True, EIntLit 1), (PBoolLit False, EIntLit 1), (PIntLit 3, EIntLit 2)]
+
+test_case_char = 
+  Program [] $
+  ECase (ECharLit 'A') [(PBoolLit True, EIntLit 1), (PBoolLit False, EIntLit 1), (PIntLit 3, EIntLit 1), (PCharLit 'A', EIntLit 2)]  
+
+test_case_var = 
+  Program [] $
+  ECase (EIntLit 1) [(PBoolLit True, EIntLit 1), (PVar "x", EAdd (EVar "x") (EIntLit 1))]
+
 main :: IO ()
 main = do
   putStrLn " ---------- make `stack test` looks prettier ----------"
@@ -329,8 +341,15 @@ main = do
   -- print $ EvalType.evalType test_letrec_recursive
   -- print $ EvalValue.evalValue test_letrec_recursive
   
-  print $ EvalType.evalType test_case
-  print $ EvalValue.evalValue test_case
+  -- print $ EvalType.evalType test_case_bool
+  -- print $ EvalValue.evalValue test_case_bool
+  -- print $ EvalType.evalType test_case_int
+  -- print $ EvalValue.evalValue test_case_int
+  -- print $ EvalType.evalType test_case_char
+  -- print $ EvalValue.evalValue test_case_char
+  -- print $ EvalType.evalType test_case_var
+  -- print $ EvalValue.evalValue test_case_var
+  
 
   -- print $ EvalValue.evalValue test_fbi
   -- print $ EvalValue.evalValue test_sum3
