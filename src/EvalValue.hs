@@ -225,9 +225,10 @@ unbindPattern p context =
     --                     _ -> False
     _ -> context
 
+
 evalProgram :: Program -> Maybe Value
 evalProgram (Program adts body) = evalStateT (EvalValue.eval body) $
-  Context { typeMap = Map.empty, exprMap = Map.empty } -- 可以用某种方式定义上下文，用于记录变量绑定状态
+  Context { adtMap = initAdtMap adts, typeMap = Map.empty, exprMap = Map.empty } -- 可以用某种方式定义上下文，用于记录变量绑定状态
 
 
 evalValue :: Program -> Result

@@ -152,8 +152,9 @@ eval (ECase e list) = do
     _ -> lift Nothing
 
 
+
 eval _ = lift Nothing
 
 evalType :: Program -> Maybe Type
 evalType (Program adts body) = evalStateT (eval body) $
-  Context { typeMap = Map.empty, exprMap = Map.empty } -- 可以用某种方式定义上下文，用于记录变量绑定状态
+  Context { adtMap = initAdtMap adts, typeMap = Map.empty, exprMap = Map.empty } -- 可以用某种方式定义上下文，用于记录变量绑定状态
