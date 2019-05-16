@@ -352,8 +352,8 @@ main = do
 
   -- print $ EvalType.evalType test_apply_lambda
   -- print $ EvalValue.evalValue test_apply_lambda
-  print $ EvalType.evalType test_nested_lambda
-  print $ EvalValue.evalValue test_nested_lambda
+  -- print $ EvalType.evalType test_nested_lambda
+  -- print $ EvalValue.evalValue test_nested_lambda
 
   -- print $ EvalType.evalType test_letrec
   -- print $ EvalValue.evalValue test_letrec
@@ -370,7 +370,7 @@ main = do
   -- print $ EvalType.evalType test_case_var
   -- print $ EvalValue.evalValue test_case_var
 
-  -- print $ EvalValue.evalValue test_fbi
+  print $ EvalValue.evalValue test_fbi
   -- print $ EvalValue.evalValue test_sum3
   -- print $ EvalValue.evalValue test_adt_ctor
   -- print $ EvalValue.evalValue test_adt_case

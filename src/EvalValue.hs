@@ -125,7 +125,15 @@ eval (EIf e1 e2 e3) = do
              else lift Nothing
     _ -> lift Nothing
 
--- Lambda 表达式无法单独求值
+-- Lambda
+eval (ELambda (varname, _) e) = do
+  context <- get
+  if emptyArg context
+  then lift Nothing
+  else
+    let e' = firstArg context in do
+      modify popArg
+      EvalValue.eval $ ELet (varname, e') e
 
 eval (ELet (varname, e1) e2) = do
   modify (insertExpr varname e1)
@@ -146,20 +154,16 @@ eval (EVar varname) = do
     Nothing -> lift Nothing
 
 eval (EApply e1 e2) = do
-  et1 <- EvalType.eval e1
-  et2 <- EvalType.eval e2
-  case et1 of 
-    TArrow t1 t2 -> if et2 == t1 
-                    then
-                      case e1 of 
-                        ELambda (varname, _) e -> EvalValue.eval $ ELet (varname, e2) e
-                        EVar funcname -> do
-                          context <- get
-                          case lookupExpr context funcname of
-                            Just funcexpr -> EvalValue.eval (EApply funcexpr e2)
-                            _ -> lift Nothing
-                        _ -> lift Nothing
-                    else lift Nothing
+  case e1 of 
+    ELambda (varname, _) e -> EvalValue.eval $ ELet (varname, e2) e
+    EApply e3 e4 -> do
+      modify (pushArg e2)
+      EvalValue.eval e1
+    EVar funcname -> do
+      context <- get
+      case lookupExpr context funcname of
+        Just funcexpr -> EvalValue.eval (EApply funcexpr e2)
+        _ -> lift Nothing
     _ -> lift Nothing
 
 eval (ECase e list) = do
@@ -236,7 +240,10 @@ unbindPattern p context =
 
 evalProgram :: Program -> Maybe Value
 evalProgram (Program adts body) = evalStateT (EvalValue.eval body) $
-  Context { adtMap = initAdtMap adts, typeMap = Map.empty, exprMap = Map.empty } -- 可以用某种方式定义上下文，用于记录变量绑定状态
+  Context { adtMap = initAdtMap adts, 
+            typeMap = Map.empty, 
+            exprMap = Map.empty,
+            argList = [] } -- 可以用某种方式定义上下文，用于记录变量绑定状态
 
 
 evalValue :: Program -> Result
