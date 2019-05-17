@@ -30,7 +30,8 @@ import Util
 
 
 data Context = Context {
-  adtMap :: Map.Map String [(String, [Type])], -- 代数数据类型的构造函数
+  adtMap :: Map.Map String [(String, [Type])], -- adtname --> [(constructor, argList)]
+  constructorMap :: Map.Map String (String, [Type]), -- constructor --> (adtname, argList)
   typeMap :: Map.Map String ([Type]), -- 类型信息,用于EvalType
   exprMap :: Map.Map String ([Expr]), -- 表达式绑定,用于EvalValue
   argList :: [Expr], -- 用于处理lambda表达式的未绑定的参数
@@ -46,7 +47,24 @@ imitAdtMap (x:xs) = case x of
   ADT adtname constructors -> Map.insert adtname constructors $ initAdtMap xs
   _ -> initAdtMap xs
 
+initConstructorMap :: [ADT] -> Map.Map String (String, [Type])
+initConstructorMap [] = Map.empty
+initConstructorMap (x:xs) = case x of 
+  ADT adtname constructors -> goConstructors adtname constructors $ initConstructorMap xs
+  _ -> initConstructorMap xs
 
+goConstructors :: String -> [(String, [Type])] -> Map.Map String (String, [Type]) -> Map.Map String (String, [Type])
+goConstructors adtname constructors map = case constructors of
+  [] -> map
+  (t:ts) -> Map.insert (fst t) (adtname, (snd t)) $ goConstructors adtname ts map
+
+lookupADT :: Context -> String -> Maybe [(String, [Type])]
+lookupADT context adtname = Map.lookup adtname $ adtMap context
+
+lookupConstructor :: Context -> String -> Maybe (String, [Type])
+lookupConstructor context constructor = Map.lookup constructor $ constructorMap context
+
+          
 -- type context operations
 containType :: Context -> String -> Bool
 containType context varname = Map.member varname (typeMap context)
@@ -57,16 +75,16 @@ lookupType context varname = case Map.lookup varname (typeMap context) of
   _ -> Nothing
 
 insertType :: String -> Type -> Context -> Context
-insertType varname mtype context@(Context adtMap typeMap exprMap argList log) = 
+insertType varname mtype context@(Context adtMap constructorMap typeMap exprMap argList log) = 
   if containType context varname
-  then Context adtMap (Map.update (\xs -> Just (mtype : xs)) varname typeMap) exprMap argList log
-  else Context adtMap (Map.insert varname [mtype] typeMap) exprMap argList log
+  then Context adtMap constructorMap (Map.update (\xs -> Just (mtype : xs)) varname typeMap) exprMap argList log
+  else Context adtMap constructorMap (Map.insert varname [mtype] typeMap) exprMap argList log
 
 deleteType :: String -> Context -> Context
-deleteType varname context@(Context adtMap typeMap exprMap argList log) = 
+deleteType varname context@(Context adtMap constructorMap typeMap exprMap argList log) = 
   case Map.lookup varname typeMap of
-    Just (t:ts) -> Context adtMap (Map.update (\xs -> Just $ init xs) varname typeMap) exprMap argList log
-    Just [t] -> Context adtMap (Map.delete varname typeMap) exprMap argList log
+    Just (t:ts) -> Context adtMap constructorMap (Map.update (\xs -> Just $ init xs) varname typeMap) exprMap argList log
+    Just [t] -> Context adtMap constructorMap (Map.delete varname typeMap) exprMap argList log
 
 
 -- expr binding context operations
@@ -80,37 +98,37 @@ lookupExpr context varname = mytrace ("lookup expr: " ++ varname ++ " == " ++ (s
                   _ -> Nothing
 
 insertExpr :: String -> Expr -> Context -> Context
-insertExpr varname expr context@(Context adtMap typeMap exprMap argList log) =  
+insertExpr varname expr context@(Context adtMap constructorMap typeMap exprMap argList log) =  
   if containExpr context varname
-  then mytrace ("insert expr: " ++ varname ++ " := " ++ (show expr)) Context adtMap typeMap (Map.update (\x -> Just (expr : x)) varname exprMap) argList log
-  else mytrace ("insert expr: " ++ varname ++ " := " ++ (show expr)) Context adtMap typeMap (Map.insert varname [expr] exprMap) argList log
+  then mytrace ("insert expr: " ++ varname ++ " := " ++ (show expr)) Context adtMap constructorMap typeMap (Map.update (\x -> Just (expr : x)) varname exprMap) argList log
+  else mytrace ("insert expr: " ++ varname ++ " := " ++ (show expr)) Context adtMap constructorMap typeMap (Map.insert varname [expr] exprMap) argList log
 
 deleteExpr :: String -> Context -> Context
-deleteExpr varname context@(Context adtMap typeMap exprMap argList log) = 
+deleteExpr varname context@(Context adtMap constructorMap typeMap exprMap argList log) = 
   case Map.lookup varname exprMap of
-    Just (t:t2:t3) -> mytrace ("delete expr: " ++ varname) Context adtMap typeMap (Map.update (\x -> Just (tail x)) varname exprMap) argList log
-    Just [t] -> mytrace ("delete expr: " ++ varname) Context adtMap typeMap (Map.delete varname exprMap) argList log
+    Just (t:t2:t3) -> mytrace ("delete expr: " ++ varname) Context adtMap constructorMap typeMap (Map.update (\x -> Just (tail x)) varname exprMap) argList log
+    Just [t] -> mytrace ("delete expr: " ++ varname) Context adtMap constructorMap typeMap (Map.delete varname exprMap) argList log
     _ -> mytrace ("delete Nothing") context
 
 -- argument stack for lambda expression
 pushArg :: Expr -> Context -> Context
-pushArg e (Context adtMap typeMap exprMap argList log) = mytrace ("pushing expr:" ++ (show e)) Context adtMap typeMap exprMap (e:argList) log
+pushArg e (Context adtMap constructorMap typeMap exprMap argList log) = mytrace ("pushing expr:" ++ (show e)) Context adtMap constructorMap typeMap exprMap (e:argList) log
 
 emptyArg :: Context -> Bool
-emptyArg (Context adtMap typeMap exprMap argList log) = null argList
+emptyArg (Context adtMap constructorMap typeMap exprMap argList log) = null argList
 
 firstArg :: Context -> Expr
-firstArg (Context adtMap typeMap exprMap argList log) = head argList
+firstArg (Context adtMap constructorMap typeMap exprMap argList log) = head argList
 
 popArg :: Context -> Context
-popArg (Context adtMap typeMap exprMap argList log) = Context adtMap typeMap exprMap (tail argList) log
+popArg (Context adtMap constructorMap typeMap exprMap argList log) = Context adtMap constructorMap typeMap exprMap (tail argList) log
 
 -- log operations
 prependLog :: String -> Context -> Context
-prependLog newLog (Context adtMap typeMap exprMap argList log) = Context adtMap typeMap exprMap argList (newLog:log)
+prependLog newLog (Context adtMap constructorMap typeMap exprMap argList log) = Context adtMap constructorMap typeMap exprMap argList (newLog:log)
 
 printLogs :: Context -> IO ()
-printLogs (Context adtMap typeMap exprMap argList log) = printStrLns log
+printLogs (Context adtMap constructorMap typeMap exprMap argList log) = printStrLns log
 
 
 printStrLns :: [String] -> IO()
@@ -119,4 +137,8 @@ printStrLns (s:ss') = do
                 putStrLn s
                 printStrLns ss'
   
-  
+
+evalMultiArgsFuncType :: [Type] -> Type -> Type
+evalMultiArgsFuncType argTypes returnType = case argTypes of
+  [] -> returnType
+  (t:ts) -> TArrow t $ evalMultiArgsFuncType ts returnType

@@ -47,7 +47,7 @@ eval (EAnd e1 e2) = do
   else 
     do
       ev2 <- getBool e2
-      return $ VBool e2
+      return $ VBool ev2
 
 eval (EOr e1 e2) = do
   ev1 <- getBool e1
@@ -56,7 +56,7 @@ eval (EOr e1 e2) = do
   else 
     do
       ev2 <- getBool e2
-      return $ VBool e2
+      return $ VBool ev2
 
 eval (EAdd e1 e2) = do
   ev1 <- getInt e1
@@ -264,6 +264,7 @@ printStateLogs :: Program -> IO ()
 printStateLogs (Program adts body) = 
   let ms = execStateT (EvalValue.eval body) $
             Context { adtMap = initAdtMap adts, 
+                      constructorMap = initConstructorMap adts,
                       typeMap = Map.empty, 
                       exprMap = Map.empty,
                       argList = [],

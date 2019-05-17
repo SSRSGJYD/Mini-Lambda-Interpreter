@@ -295,6 +295,13 @@ test_case_var =
   Program [] $
   ECase (EIntLit 1) [(PBoolLit True, EIntLit 1), (PVar "x", EAdd (EVar "x") (EIntLit 1))]
 
+-- adt
+test_adt_type =
+  Program
+  [ ADT "tuple3" [("tuple3", [TInt, TInt, TInt])]
+  ] $
+  EApply (EVar "tuple3") (EIntLit 1)
+
 
 main :: IO ()
 main = do
@@ -369,9 +376,11 @@ main = do
   -- print $ EvalType.evalType test_case_var
   -- print $ EvalValue.evalValue test_case_var
 
+  print $ EvalType.evalType test_adt_type
+
   -- print $ EvalValue.evalValue test_fbi
   -- print $ EvalValue.evalValue test_sum3
-  print $ EvalValue.evalValue test_adt_ctor
+  -- print $ EvalValue.evalValue test_adt_ctor
   -- print $ EvalValue.evalValue test_adt_case
   -- print $ EvalValue.evalProgram test_adt_list
   -- print $ EvalValue.evalProgram test_adt_list_range

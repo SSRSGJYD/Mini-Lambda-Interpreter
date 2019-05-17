@@ -148,9 +148,10 @@ eval (EVar varname) = do
             et <- mytrace ("[EVar] EvalType.eval: " ++ show e) eval e
             modify (insertExpr varname e)
             return et
-        Nothing -> lift Nothing
+        Nothing -> case lookupConstructor context varname of
+                      Just (adtname, argList) -> return $ evalMultiArgsFuncType argList (TData adtname)
+                      _ -> lift Nothing
                 
-
 eval (EApply e1 e2) = do
   et1 <- mytrace ("[EApply] EvalType.eval: " ++ show e1) eval e1
   et2 <- mytrace ("[EApply] EvalType.eval: " ++ show e2) eval e2
@@ -164,12 +165,12 @@ eval (ECase e list) = do
     _ -> lift Nothing
 
 
-
 eval _ = lift Nothing
 
 evalType :: Program -> Maybe Type
 evalType (Program adts body) = evalStateT (eval body) $
   Context { adtMap = initAdtMap adts, 
+            constructorMap = initConstructorMap adts,
             typeMap = Map.empty, 
             exprMap = Map.empty,
             argList = [],
