@@ -34,7 +34,7 @@ test_fbi =
       (EApply (EVar "fbi") (ESub (EVar "x") (EIntLit 2))))
   ) $
 
-  callFun (EVar "fbi") [EIntLit 5]
+  callFun (EVar "fbi") [EIntLit 10]
 
 test_adt_ctor =
   Program
@@ -371,12 +371,12 @@ main = do
 
   -- print $ EvalValue.evalValue test_fbi
   -- print $ EvalValue.evalValue test_sum3
-  -- print $ EvalValue.evalValue test_adt_ctor
+  print $ EvalValue.evalValue test_adt_ctor
   -- print $ EvalValue.evalValue test_adt_case
   -- print $ EvalValue.evalProgram test_adt_list
   -- print $ EvalValue.evalProgram test_adt_list_range
   -- print $ EvalValue.evalValue test_adt_list_sum
-  print $ EvalType.evalType test_fbi
+  -- print $ EvalType.evalType test_fbi
   -- print $ EvalType.evalType test_sum3
   -- print $ EvalType.evalType test_adt_ctor
   -- print $ EvalType.evalType test_adt_case

@@ -3,7 +3,7 @@ module Context where
 import AST
 import Control.Monad.State
 import qualified Data.Map as Map
-import Debug.Trace
+import Util
 
 -- data StackFrame = StackFrame {
 --   adtMap :: Map.Map String [(String, [Type])], -- 代数数据类型的构造函数
@@ -69,7 +69,7 @@ containExpr :: Context -> String -> Bool
 containExpr context varname = Map.member varname (exprMap context)
 
 lookupExpr :: Context -> String -> Maybe Expr
-lookupExpr context varname = trace ("lookup expr: " ++ varname ++ " == " ++ (show e)) e 
+lookupExpr context varname = mytrace ("lookup expr: " ++ varname ++ " == " ++ (show e)) e 
       where e = case Map.lookup varname (exprMap context) of
                   Just exprs -> Just $ head exprs
                   _ -> Nothing
@@ -77,19 +77,19 @@ lookupExpr context varname = trace ("lookup expr: " ++ varname ++ " == " ++ (sho
 insertExpr :: String -> Expr -> Context -> Context
 insertExpr varname expr context@(Context adtMap typeMap exprMap argList log) =  
   if containExpr context varname
-  then trace ("insert expr: " ++ varname ++ " := " ++ (show expr)) Context adtMap typeMap (Map.update (\x -> Just (expr : x)) varname exprMap) argList log
-  else trace ("insert expr: " ++ varname ++ " := " ++ (show expr)) Context adtMap typeMap (Map.insert varname [expr] exprMap) argList log
+  then mytrace ("insert expr: " ++ varname ++ " := " ++ (show expr)) Context adtMap typeMap (Map.update (\x -> Just (expr : x)) varname exprMap) argList log
+  else mytrace ("insert expr: " ++ varname ++ " := " ++ (show expr)) Context adtMap typeMap (Map.insert varname [expr] exprMap) argList log
 
 deleteExpr :: String -> Context -> Context
 deleteExpr varname context@(Context adtMap typeMap exprMap argList log) = 
   case Map.lookup varname exprMap of
-    Just (t:t2:t3) -> trace ("delete expr: " ++ varname) Context adtMap typeMap (Map.update (\x -> Just (tail x)) varname exprMap) argList log
-    Just [t] -> trace ("delete expr: " ++ varname) Context adtMap typeMap (Map.delete varname exprMap) argList log
-    _ -> trace ("delete Nothing") context
+    Just (t:t2:t3) -> mytrace ("delete expr: " ++ varname) Context adtMap typeMap (Map.update (\x -> Just (tail x)) varname exprMap) argList log
+    Just [t] -> mytrace ("delete expr: " ++ varname) Context adtMap typeMap (Map.delete varname exprMap) argList log
+    _ -> mytrace ("delete Nothing") context
 
 -- argument stack for lambda expression
 pushArg :: Expr -> Context -> Context
-pushArg e (Context adtMap typeMap exprMap argList log) = trace ("pushing expr:" ++ (show e)) Context adtMap typeMap exprMap (e:argList) log
+pushArg e (Context adtMap typeMap exprMap argList log) = mytrace ("pushing expr:" ++ (show e)) Context adtMap typeMap exprMap (e:argList) log
 
 emptyArg :: Context -> Bool
 emptyArg (Context adtMap typeMap exprMap argList log) = null argList

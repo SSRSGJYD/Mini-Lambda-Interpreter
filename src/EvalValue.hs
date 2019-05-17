@@ -8,7 +8,7 @@ import Context
 import Control.Monad.State
 import EvalType
 import qualified Data.Map as Map
-import Debug.Trace
+import Util
 
 
 data Value
@@ -64,97 +64,63 @@ eval (EDiv e1 e2) = do
   return $ (VInt $ (ev1 `div` ev2))
 
 eval (EEq e1 e2) = do
-  sameType <- EvalType.isSameType e1 e2
   ev1 <- EvalValue.eval e1
   ev2 <- EvalValue.eval e2
-  case sameType of 
-    True -> return (VBool $ ev1 == ev2)
-    False -> lift Nothing
+  return (VBool $ ev1 == ev2)
 
 eval (ENeq e1 e2) = do
-  sameType <- EvalType.isSameType e1 e2
   ev1 <- EvalValue.eval e1
   ev2 <- EvalValue.eval e2
-  case sameType of 
-    True -> return (VBool $ ev1 /= ev2)
-    False -> lift Nothing
+  return (VBool $ ev1 /= ev2)
 
 eval (ELt e1 e2) = do
-  sameType <- EvalType.isSameType e1 e2
-  comparable <- EvalType.isComparableType e1
   ev1 <- EvalValue.eval e1
   ev2 <- EvalValue.eval e2
-  case sameType && comparable of 
-    True -> return (VBool $ ev1 < ev2)
-    False -> lift Nothing
+  return (VBool $ ev1 < ev2)
 
 eval (EGt e1 e2) = do
-  sameType <- EvalType.isSameType e1 e2
-  comparable <- EvalType.isComparableType e1
   ev1 <- EvalValue.eval e1
   ev2 <- EvalValue.eval e2
-  case sameType && comparable of 
-    True -> return (VBool $ ev1 > ev2)
-    False -> lift Nothing
+  return (VBool $ ev1 > ev2)
 
 eval (ELe e1 e2) = do
-  sameType <- EvalType.isSameType e1 e2
-  comparable <- EvalType.isComparableType e1
   ev1 <- EvalValue.eval e1
   ev2 <- EvalValue.eval e2
-  case sameType && comparable of 
-    True -> return (VBool $ ev1 <= ev2)
-    False -> lift Nothing
+  return (VBool $ ev1 <= ev2)
 
 eval (EGe e1 e2) = do
-  sameType <- EvalType.isSameType e1 e2
-  comparable <- EvalType.isComparableType e1
   ev1 <- EvalValue.eval e1
   ev2 <- EvalValue.eval e2
-  case sameType && comparable of 
-    True -> return (VBool $ ev1 >= ev2)
-    False -> lift Nothing
+  return (VBool $ ev1 >= ev2)
     
 eval (EIf e1 e2 e3) = do
   ev1 <- EvalValue.eval e1
   case ev1 of
-    VBool True -> trace ("[if condition true] EvalValue.eval: " ++ (show e2)) EvalValue.eval e2
-    VBool False -> trace ("[if condition false] EvalValue.eval: " ++ (show e3)) EvalValue.eval e3
-  -- et <- EvalType.eval e1
-  -- sameType <- EvalType.isSameType e2 e3
-  -- case et of
-  --   TBool -> if sameType
-  --            then do 
-  --               ev1 <- EvalValue.eval e1
-  --               case ev1 of
-  --                 VBool True -> trace ("if condition true, expr:" ++ (show e2)) EvalValue.eval e2
-  --                 VBool False -> trace ("if condition false, expr:" ++ (show e3)) EvalValue.eval e3
-  --            else lift Nothing
-  --   _ -> lift Nothing
+    VBool True -> mytrace ("[if condition true] EvalValue.eval: " ++ (show e2)) EvalValue.eval e2
+    VBool False -> mytrace ("[if condition false] EvalValue.eval: " ++ (show e3)) EvalValue.eval e3
 
 -- Lambda
 eval (ELambda (varname, vartype) e) = do
   context <- get
-  trace ("eval lambda expr: \\" ++ varname ++ " -> " ++ show e) lift Nothing
   if emptyArg context
   then lift Nothing
   else
     let e' = firstArg context in do
       modify popArg
       modify (insertType varname vartype)
-      result <- trace ("[ELambda] EvalValue.eval: " ++ (show $ ELet (varname, e') e)) EvalValue.eval $ ELet (varname, e') e
+      result <- mytrace ("[ELambda] EvalValue.eval: " ++ (show $ ELet (varname, e') e)) EvalValue.eval $ ELet (varname, e') e
       modify (deleteType varname)
       return result
 
 eval (ELet (varname, e1) e2) = do
   modify (insertExpr varname e1)
-  t <- trace ("[ELet] EvalValue.eval: " ++ (show e2)) EvalValue.eval e2
+  t <- mytrace ("[ELet] EvalValue.eval: " ++ (show e2)) EvalValue.eval e2
   modify (deleteExpr varname)
   return t
 
 eval (ELetRec funcname (argname,argtype) (funcExpr, returntype) expr) = do
   modify (insertExpr funcname (ELambda (argname, argtype) funcExpr))
-  t <- trace ("[ELetRec] EvalValue.eval: " ++ (show expr)) EvalValue.eval expr
+  t <- mytrace ("[ELetRec] EvalValue.eval: " ++ (show expr)) EvalValue.eval expr
   modify (deleteExpr funcname)
   return t
 
@@ -163,21 +129,21 @@ eval (EVar varname) = do
   case lookupExpr context varname of 
       Just e -> do
           modify (deleteExpr varname)
-          ev <- trace ("[EVar] EvalValue.eval: " ++ (show e)) EvalValue.eval e
+          ev <- mytrace ("[EVar] EvalValue.eval: " ++ (show e)) EvalValue.eval e
           modify (insertExpr varname e)
           return ev
       Nothing -> lift Nothing
 
 eval (EApply e1 e2) = do
   case e1 of 
-    ELambda (varname, _) e -> trace ("[EApply] EvalValue.eval: " ++ (show $ ELet (varname, e2) e)) EvalValue.eval $ ELet (varname, e2) e
+    ELambda (varname, _) e -> mytrace ("[EApply] EvalValue.eval: " ++ (show $ ELet (varname, e2) e)) EvalValue.eval $ ELet (varname, e2) e
     EApply e3 e4 -> do
       modify (pushArg e2)
-      trace ("[EApply] EvalValue.eval: " ++ (show e1)) EvalValue.eval e1
+      mytrace ("[EApply] EvalValue.eval: " ++ (show e1)) EvalValue.eval e1
     EVar funcname -> do
       context <- get
       case lookupExpr context funcname of
-        Just funcexpr -> trace ("[EApply] EvalValue.eval: " ++ (show $ EApply funcexpr e2)) EvalValue.eval (EApply funcexpr e2)
+        Just funcexpr -> mytrace ("[EApply] EvalValue.eval: " ++ (show $ EApply funcexpr e2)) EvalValue.eval (EApply funcexpr e2)
         _ -> lift Nothing
     _ -> lift Nothing
 
@@ -188,11 +154,11 @@ eval (ECase e list) = do
                   if ebool
                   then do
                     modify (bindPattern (fst p) e)
-                    ev <- trace ("[ECase] EvalValue.eval: " ++ (show $ snd p)) EvalValue.eval (snd p)
+                    ev <- mytrace ("[ECase] EvalValue.eval: " ++ (show $ snd p)) EvalValue.eval (snd p)
                     modify (unbindPattern (fst p))
                     return ev
                   else
-                    trace ("[ECase] EvalValue.eval: " ++ (show $ ECase e ps)) EvalValue.eval (ECase e ps)
+                    mytrace ("[ECase] EvalValue.eval: " ++ (show $ ECase e ps)) EvalValue.eval (ECase e ps)
     _ -> lift Nothing
 
 

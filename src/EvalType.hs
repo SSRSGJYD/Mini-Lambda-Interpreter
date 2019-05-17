@@ -5,7 +5,7 @@ import AST
 import Context
 import Control.Monad.State
 import qualified Data.Map as Map
-import Debug.Trace
+import Util
 
 
 isBool :: Expr -> ContextState Type
@@ -124,14 +124,14 @@ eval (ELambda (varname, t1) e) = do
 
 eval (ELet (varname, e1) e2) = do
   modify (insertExpr varname e1)
-  t <- trace ("[ELet] EvalType.eval: " ++ show e2) eval e2
+  t <- mytrace ("[ELet] EvalType.eval: " ++ show e2) eval e2
   modify (deleteExpr varname)
   return t
 
 eval (ELetRec funcname (argname,argtype) (funcExpr, returntype) expr) = do
   modify (insertExpr funcname (ELambda (argname, argtype) funcExpr))
   modify (insertType funcname (TArrow argtype returntype))
-  t <- trace ("[ELetRec] EvalType.eval: " ++ show expr) eval expr
+  t <- mytrace ("[ELetRec] EvalType.eval: " ++ show expr) eval expr
   modify (deleteExpr funcname)
   modify (deleteType funcname)
   return t
@@ -144,22 +144,22 @@ eval (EVar varname) = do
       case lookupExpr context varname of 
         Just e -> do
             modify (deleteExpr varname)
-            et <- trace ("[EVar] EvalType.eval: " ++ show e) eval e
+            et <- mytrace ("[EVar] EvalType.eval: " ++ show e) eval e
             modify (insertExpr varname e)
             return et
         Nothing -> lift Nothing
                 
 
 eval (EApply e1 e2) = do
-  et1 <- trace ("[EApply] EvalType.eval: " ++ show e1) eval e1
-  et2 <- trace ("[EApply] EvalType.eval: " ++ show e2) eval e2
+  et1 <- mytrace ("[EApply] EvalType.eval: " ++ show e1) eval e1
+  et2 <- mytrace ("[EApply] EvalType.eval: " ++ show e2) eval e2
   case et1 of 
     TArrow t1 t2 -> if et2 == t1 then return t2 else lift Nothing
     _ -> lift Nothing
 
 eval (ECase e list) = do
   case list of
-    (x : xs) -> trace ("[ECase] EvalType.eval: " ++ (show $ snd x)) eval $ snd x
+    (x : xs) -> mytrace ("[ECase] EvalType.eval: " ++ (show $ snd x)) eval $ snd x
     _ -> lift Nothing
 
 

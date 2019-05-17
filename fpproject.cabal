@@ -31,6 +31,7 @@ library
       EvalType
       EvalValue
       Context
+      Util
   other-modules:
       Paths_fpproject
   hs-source-dirs:
