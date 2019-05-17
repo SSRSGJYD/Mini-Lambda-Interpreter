@@ -137,8 +137,3 @@ printStrLns (s:ss') = do
                 putStrLn s
                 printStrLns ss'
   
-
-evalMultiArgsFuncType :: [Type] -> Type -> Type
-evalMultiArgsFuncType argTypes returnType = case argTypes of
-  [] -> returnType
-  (t:ts) -> TArrow t $ evalMultiArgsFuncType ts returnType

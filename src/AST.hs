@@ -194,6 +194,9 @@ data Expr
   --
   -- 如果你要实现的语言不支持模式匹配，就不用管这个构造函数。
 
+  | EConstructor String [Expr]
+  -- 构造函数应用了若干参数，可以用EApply和EVar来代替，写成这样方便于进行模式匹配
+
   deriving (Show, Eq)
 
 

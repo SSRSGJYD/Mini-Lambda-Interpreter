@@ -164,6 +164,12 @@ eval (ECase e list) = do
     (x : xs) -> mytrace ("[ECase] EvalType.eval: " ++ (show $ snd x)) eval $ snd x
     _ -> lift Nothing
 
+eval (EConstructor constructor argList) = do
+  context <- get
+  case lookupConstructor context constructor of
+    Just (adtname, argTypes) -> evalApplyMultiArgsFuncType argList $ evalMultiArgsFuncType argTypes (TData adtname)
+    _ -> lift Nothing
+
 
 eval _ = lift Nothing
 
@@ -175,3 +181,22 @@ evalType (Program adts body) = evalStateT (eval body) $
             exprMap = Map.empty,
             argList = [],
             logList = ["start EvalType Program"] } -- 可以用某种方式定义上下文，用于记录变量绑定状态
+
+
+evalMultiArgsFuncType :: [Type] -> Type -> Type
+evalMultiArgsFuncType argTypes returnType = case argTypes of
+  [] -> returnType
+  (t:ts) -> TArrow t $ evalMultiArgsFuncType ts returnType
+
+
+evalApplyMultiArgsFuncType :: [Expr] -> Type -> ContextState Type
+evalApplyMultiArgsFuncType argTypes funcType = do
+  case argTypes of
+    [] -> return funcType
+    (arg : args) -> case funcType of
+        TArrow t1 t2 -> do
+          et <- mytrace ("[EConstructor] EvalType.eval: " ++ (show $ arg)) eval arg
+          if et == t1
+          then evalApplyMultiArgsFuncType args t2
+          else lift Nothing
+        _ -> lift Nothing
