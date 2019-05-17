@@ -376,7 +376,7 @@ main = do
   -- print $ EvalValue.evalProgram test_adt_list
   -- print $ EvalValue.evalProgram test_adt_list_range
   -- print $ EvalValue.evalValue test_adt_list_sum
-  -- print $ EvalType.evalType test_fbi
+  print $ EvalType.evalType test_fbi
   -- print $ EvalType.evalType test_sum3
   -- print $ EvalType.evalType test_adt_ctor
   -- print $ EvalType.evalType test_adt_case

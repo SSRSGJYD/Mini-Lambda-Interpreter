@@ -159,7 +159,7 @@ eval (ELetRec funcname (argname,argtype) (funcExpr, returntype) expr) = do
   return t
 
 eval (EVar varname) = do
-  context <- trace ("here~~~") get
+  context <- get
   case lookupExpr context varname of 
       Just e -> do
           modify (deleteExpr varname)
