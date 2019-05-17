@@ -39,12 +39,15 @@ data Context = Context {
 
 type ContextState a = StateT Context Maybe a
 
+-- ADT
 initAdtMap :: [ADT] -> Map.Map String [(String, [Type])]
 initAdtMap [] = Map.empty
 imitAdtMap (x:xs) = case x of 
   ADT adtname constructors -> Map.insert adtname constructors $ initAdtMap xs
   _ -> initAdtMap xs
 
+
+-- type context operations
 containType :: Context -> String -> Bool
 containType context varname = Map.member varname (typeMap context)
 
@@ -65,6 +68,8 @@ deleteType varname context@(Context adtMap typeMap exprMap argList log) =
     Just (t:ts) -> Context adtMap (Map.update (\xs -> Just $ init xs) varname typeMap) exprMap argList log
     Just [t] -> Context adtMap (Map.delete varname typeMap) exprMap argList log
 
+
+-- expr binding context operations
 containExpr :: Context -> String -> Bool
 containExpr context varname = Map.member varname (exprMap context)
 

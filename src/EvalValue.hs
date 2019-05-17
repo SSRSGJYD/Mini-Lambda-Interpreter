@@ -40,8 +40,23 @@ eval (EIntLit i) = return $ VInt i
 eval (ECharLit c) = return $ VChar c
 
 eval (ENot e) = getBool e >>= \b -> return (VBool $ not b)
-eval (EAnd e1 e2) = getBool e1 >>= \e -> (getBool e2 >>= \f -> return (VBool $ e && f))
-eval (EOr e1 e2) = getBool e1 >>= \e -> (getBool e2 >>= \f -> return (VBool $ e || f))
+eval (EAnd e1 e2) = do
+  ev1 <- getBool e1
+  if not ev1
+  then return $ VBool False
+  else 
+    do
+      ev2 <- getBool e2
+      return $ VBool e2
+
+eval (EOr e1 e2) = do
+  ev1 <- getBool e1
+  if ev1
+  then return $ VBool True
+  else 
+    do
+      ev2 <- getBool e2
+      return $ VBool e2
 
 eval (EAdd e1 e2) = do
   ev1 <- getInt e1
@@ -61,7 +76,16 @@ eval (EMul e1 e2) = do
 eval (EDiv e1 e2) = do
   ev1 <- getInt e1
   ev2 <- getInt e2
-  return $ (VInt $ (ev1 `div` ev2))
+  if ev2 == 0
+  then return $ VInt 0
+  else return $ (VInt $ (ev1 `div` ev2))
+
+eval (EMod e1 e2) = do
+  ev1 <- getInt e1
+  ev2 <- getInt e2
+  if ev2 == 0
+  then return $ VInt 0
+  else return $ (VInt $ (ev1 `mod` ev2))
 
 eval (EEq e1 e2) = do
   ev1 <- EvalValue.eval e1

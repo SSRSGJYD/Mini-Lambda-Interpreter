@@ -70,6 +70,7 @@ eval (EAdd e1 e2) = isInt2 e1 e2 >> return TInt
 eval (ESub e1 e2) = isInt2 e1 e2 >> return TInt
 eval (EMul e1 e2) = isInt2 e1 e2 >> return TInt
 eval (EDiv e1 e2) = isInt2 e1 e2 >> return TInt
+eval (EMod e1 e2) = isInt2 e1 e2 >> return TInt
 
 eval (EEq e1 e2) = do
   e <- isSameType e1 e2
