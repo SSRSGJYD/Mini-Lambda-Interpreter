@@ -34,7 +34,7 @@ test_fbi =
       (EApply (EVar "fbi") (ESub (EVar "x") (EIntLit 2))))
   ) $
 
-  callFun (EVar "fbi") [EIntLit 10]
+  callFun (EVar "fbi") [EIntLit 5]
 
 test_adt_ctor =
   Program
@@ -367,16 +367,7 @@ main = do
   -- print $ EvalType.evalType test_case_char
   -- print $ EvalValue.evalValue test_case_char
   -- print $ EvalType.evalType test_case_var
-  print $ EvalValue.evalValue test_case_var
-
-  -- print $ makeFun ("fbi", TInt) [("x", TInt)] (
-  --   EIf (ELe (EVar "x") (EIntLit 1))
-  --     (EIntLit 1)
-  --     (EAdd
-  --       (EApply (EVar "fbi") (ESub (EVar "x") (EIntLit 1)))
-  --       (EApply (EVar "fbi") (ESub (EVar "x") (EIntLit 2))))
-  --   ) $
-  --   callFun (EVar "fbi") [EIntLit 10]
+  -- print $ EvalValue.evalValue test_case_var
 
   -- print $ EvalValue.evalValue test_fbi
   -- print $ EvalValue.evalValue test_sum3

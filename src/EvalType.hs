@@ -5,6 +5,7 @@ import AST
 import Context
 import Control.Monad.State
 import qualified Data.Map as Map
+import Debug.Trace
 
 
 isBool :: Expr -> ContextState Type
@@ -135,9 +136,15 @@ eval (EVar varname) = do
   context <- get
   case lookupType context varname of 
     Just t -> return t
-    Nothing -> case lookupExpr context varname of 
-                  Just e -> eval e
-                  Nothing -> lift Nothing
+    Nothing -> do
+      case lookupExpr context varname of 
+        Just e -> do
+            modify (deleteExpr varname)
+            et <- eval e
+            modify (insertExpr varname e)
+            return et
+        Nothing -> lift Nothing
+                
 
 eval (EApply e1 e2) = do
   et1 <- eval e1

@@ -1,4 +1,6 @@
 -- | 这是其中一种实现方式的代码框架。你可以参考它，或用你自己的方式实现，只要按需求完成 evalValue :: Program -> Result 就行。
+{-# LANGUAGE BangPatterns #-}
+
 module EvalValue where
 
 import AST
@@ -116,8 +118,8 @@ eval (EGe e1 e2) = do
 eval (EIf e1 e2 e3) = do
   ev1 <- EvalValue.eval e1
   case ev1 of
-    VBool True -> trace ("if condition true, expr:" ++ (show e2)) EvalValue.eval e2
-    VBool False -> trace ("if condition false, expr:" ++ (show e3)) EvalValue.eval e3
+    VBool True -> trace ("[if condition true] EvalValue.eval: " ++ (show e2)) EvalValue.eval e2
+    VBool False -> trace ("[if condition false] EvalValue.eval: " ++ (show e3)) EvalValue.eval e3
   -- et <- EvalType.eval e1
   -- sameType <- EvalType.isSameType e2 e3
   -- case et of
@@ -140,38 +142,42 @@ eval (ELambda (varname, vartype) e) = do
     let e' = firstArg context in do
       modify popArg
       modify (insertType varname vartype)
-      result <- EvalValue.eval $ ELet (varname, e') e
+      result <- trace ("[ELambda] EvalValue.eval: " ++ (show $ ELet (varname, e') e)) EvalValue.eval $ ELet (varname, e') e
       modify (deleteType varname)
       return result
 
 eval (ELet (varname, e1) e2) = do
   modify (insertExpr varname e1)
-  t <- EvalValue.eval e2
+  t <- trace ("[ELet] EvalValue.eval: " ++ (show e2)) EvalValue.eval e2
   modify (deleteExpr varname)
   return t
 
 eval (ELetRec funcname (argname,argtype) (funcExpr, returntype) expr) = do
   modify (insertExpr funcname (ELambda (argname, argtype) funcExpr))
-  t <- EvalValue.eval expr
+  t <- trace ("[ELetRec] EvalValue.eval: " ++ (show expr)) EvalValue.eval expr
   modify (deleteExpr funcname)
   return t
 
 eval (EVar varname) = do
-  context <- get
+  context <- trace ("here~~~") get
   case lookupExpr context varname of 
-    Just e -> EvalValue.eval e
-    Nothing -> lift Nothing
+      Just e -> do
+          modify (deleteExpr varname)
+          ev <- trace ("[EVar] EvalValue.eval: " ++ (show e)) EvalValue.eval e
+          modify (insertExpr varname e)
+          return ev
+      Nothing -> lift Nothing
 
 eval (EApply e1 e2) = do
   case e1 of 
-    ELambda (varname, _) e -> EvalValue.eval $ ELet (varname, e2) e
+    ELambda (varname, _) e -> trace ("[EApply] EvalValue.eval: " ++ (show $ ELet (varname, e2) e)) EvalValue.eval $ ELet (varname, e2) e
     EApply e3 e4 -> do
       modify (pushArg e2)
-      EvalValue.eval e1
+      trace ("[EApply] EvalValue.eval: " ++ (show e1)) EvalValue.eval e1
     EVar funcname -> do
       context <- get
       case lookupExpr context funcname of
-        Just funcexpr -> EvalValue.eval (EApply funcexpr e2)
+        Just funcexpr -> trace ("[EApply] EvalValue.eval: " ++ (show $ EApply funcexpr e2)) EvalValue.eval (EApply funcexpr e2)
         _ -> lift Nothing
     _ -> lift Nothing
 
@@ -182,11 +188,11 @@ eval (ECase e list) = do
                   if ebool
                   then do
                     modify (bindPattern (fst p) e)
-                    ev <- EvalValue.eval (snd p)
+                    ev <- trace ("[ECase] EvalValue.eval: " ++ (show $ snd p)) EvalValue.eval (snd p)
                     modify (unbindPattern (fst p))
                     return ev
                   else
-                    EvalValue.eval (ECase e ps)
+                    trace ("[ECase] EvalValue.eval: " ++ (show $ ECase e ps)) EvalValue.eval (ECase e ps)
     _ -> lift Nothing
 
 
