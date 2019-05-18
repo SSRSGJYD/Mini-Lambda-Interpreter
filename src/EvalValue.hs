@@ -6,7 +6,6 @@ module EvalValue where
 import AST
 import Context
 import Control.Monad.State
-import EvalType
 import qualified Data.Map as Map
 import Util
 import Pattern
@@ -151,7 +150,11 @@ eval (EVar varname) = do
           ev <- mytrace ("[EVar] EvalValue.eval: " ++ (show e)) EvalValue.eval e
           modify (insertExpr varname e)
           return ev
-      Nothing -> lift Nothing -- ADT constructor should not fall here
+      Nothing ->  -- ADT constructor without arguments
+          case lookupConstructor context varname of
+              Just (adtname, []) -> do
+                mytrace ("[EVar] EvalValue.eval: " ++ (show $ EConstructor varname [])) EvalValue.eval (EConstructor varname [])
+              _ -> lift Nothing
 
 -- function apply
 eval (EApply e1 e2) = do
@@ -200,14 +203,10 @@ eval (EConstructor constructor argList) = do
         if emptyArg context
           then lift Nothing
           else
-            let e = firstArg context in do
-              et <- EvalType.eval e
-              if et == typeList !! (length argList)
-              then do
-                modify popArg
-                mytrace ("[EConstructor] EvalValue.eval" ++ show (EConstructor constructor (argList ++ [e]))) EvalValue.eval $ EConstructor constructor (argList ++ [e])
-              else lift Nothing
-
+            let e = firstArg context in do  
+              modify popArg
+              mytrace ("[EConstructor] EvalValue.eval" ++ show (EConstructor constructor (argList ++ [e]))) EvalValue.eval $ EConstructor constructor (argList ++ [e])
+              
 
 evalExprList :: [Expr] -> ContextState [Value]
 evalExprList [] = return []

@@ -173,15 +173,6 @@ eval (EConstructor constructor argList) = do
 
 eval _ = lift Nothing
 
-evalType :: Program -> Maybe Type
-evalType (Program adts body) = evalStateT (eval body) $
-  Context { adtMap = initAdtMap adts, 
-            constructorMap = initConstructorMap adts,
-            typeMap = Map.empty, 
-            exprMap = Map.empty,
-            argList = [],
-            logList = ["start EvalType Program"] } -- 可以用某种方式定义上下文，用于记录变量绑定状态
-
 
 evalMultiArgsFuncType :: [Type] -> Type -> Type
 evalMultiArgsFuncType argTypes returnType = case argTypes of
@@ -200,3 +191,13 @@ evalApplyMultiArgsFuncType argTypes funcType = do
           then evalApplyMultiArgsFuncType args t2
           else lift Nothing
         _ -> lift Nothing
+
+
+evalType :: Program -> Maybe Type
+evalType (Program adts body) = evalStateT (eval body) $
+  Context { adtMap = initAdtMap adts, 
+            constructorMap = initConstructorMap adts,
+            typeMap = Map.empty, 
+            exprMap = Map.empty,
+            argList = [],
+            logList = ["start EvalType Program"] }

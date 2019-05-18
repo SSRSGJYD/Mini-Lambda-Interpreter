@@ -92,7 +92,7 @@ containExpr :: Context -> String -> Bool
 containExpr context varname = Map.member varname (exprMap context)
 
 lookupExpr :: Context -> String -> Maybe Expr
-lookupExpr context varname = mytrace ("lookup expr: " ++ varname ++ " == " ++ (show e)) e 
+lookupExpr context varname = mytrace ("*** lookup expr: " ++ varname ++ " == " ++ (show e)) e 
       where e = case Map.lookup varname (exprMap context) of
                   Just exprs -> Just $ head exprs
                   _ -> Nothing
@@ -100,15 +100,15 @@ lookupExpr context varname = mytrace ("lookup expr: " ++ varname ++ " == " ++ (s
 insertExpr :: String -> Expr -> Context -> Context
 insertExpr varname expr context@(Context adtMap constructorMap typeMap exprMap argList log) =  
   if containExpr context varname
-  then mytrace ("insert expr: " ++ varname ++ " := " ++ (show expr)) Context adtMap constructorMap typeMap (Map.update (\x -> Just (expr : x)) varname exprMap) argList log
-  else mytrace ("insert expr: " ++ varname ++ " := " ++ (show expr)) Context adtMap constructorMap typeMap (Map.insert varname [expr] exprMap) argList log
+  then mytrace ("*** insert expr: " ++ varname ++ " := " ++ (show expr)) Context adtMap constructorMap typeMap (Map.update (\x -> Just (expr : x)) varname exprMap) argList log
+  else mytrace ("*** insert expr: " ++ varname ++ " := " ++ (show expr)) Context adtMap constructorMap typeMap (Map.insert varname [expr] exprMap) argList log
 
 deleteExpr :: String -> Context -> Context
 deleteExpr varname context@(Context adtMap constructorMap typeMap exprMap argList log) = 
   case Map.lookup varname exprMap of
-    Just (t:t2:t3) -> mytrace ("delete expr: " ++ varname) Context adtMap constructorMap typeMap (Map.update (\x -> Just (tail x)) varname exprMap) argList log
-    Just [t] -> mytrace ("delete expr: " ++ varname) Context adtMap constructorMap typeMap (Map.delete varname exprMap) argList log
-    _ -> mytrace ("delete Nothing") context
+    Just (t:t2:t3) -> mytrace ("*** delete expr: " ++ varname) Context adtMap constructorMap typeMap (Map.update (\x -> Just (tail x)) varname exprMap) argList log
+    Just [t] -> mytrace ("*** delete expr: " ++ varname) Context adtMap constructorMap typeMap (Map.delete varname exprMap) argList log
+    _ -> mytrace ("*** delete Nothing") context
 
 -- argument stack for lambda expression
 pushArg :: Expr -> Context -> Context

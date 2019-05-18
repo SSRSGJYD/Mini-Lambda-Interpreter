@@ -383,9 +383,8 @@ main = do
   -- print $ EvalValue.evalValue test_case_var
 
   -- print $ EvalType.evalType test_adt_type
-  print $ EvalType.evalType test_adt_value
-  print $ EvalValue.evalValue test_adt_value
-
+  -- print $ EvalType.evalType test_adt_value
+  -- print $ EvalValue.evalValue test_adt_value
 
   -- print $ EvalValue.evalValue test_fbi
   -- print $ EvalValue.evalValue test_sum3

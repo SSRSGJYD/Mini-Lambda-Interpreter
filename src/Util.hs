@@ -4,8 +4,8 @@ import AST
 import Debug.Trace
 
 mytrace :: String -> a -> a
-mytrace = trace -- for debugging
--- mytrace str x = x
+-- mytrace = trace -- for debugging
+mytrace str x = x
 
 
 wrapValueToExpr :: Value -> Expr
