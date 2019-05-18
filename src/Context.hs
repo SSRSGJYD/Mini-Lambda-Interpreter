@@ -70,21 +70,22 @@ containType :: Context -> String -> Bool
 containType context varname = Map.member varname (typeMap context)
 
 lookupType :: Context -> String -> Maybe Type
-lookupType context varname = case Map.lookup varname (typeMap context) of
-  Just types -> Just $ head types
-  _ -> Nothing
+lookupType context varname = mytrace ("*** lookup type: " ++ varname ++ " == " ++ show e) e
+  where e = case Map.lookup varname (typeMap context) of
+              Just types ->  Just $ head types
+              _ -> Nothing
 
 insertType :: String -> Type -> Context -> Context
 insertType varname mtype context@(Context adtMap constructorMap typeMap exprMap argList log) = 
   if containType context varname
-  then Context adtMap constructorMap (Map.update (\xs -> Just (mtype : xs)) varname typeMap) exprMap argList log
-  else Context adtMap constructorMap (Map.insert varname [mtype] typeMap) exprMap argList log
+  then mytrace ("*** insert type: " ++ varname ++ " := " ++ show mtype) Context adtMap constructorMap (Map.update (\xs -> Just (mtype : xs)) varname typeMap) exprMap argList log
+  else mytrace ("*** insert type: " ++ varname ++ " := " ++ show mtype) Context adtMap constructorMap (Map.insert varname [mtype] typeMap) exprMap argList log
 
 deleteType :: String -> Context -> Context
 deleteType varname context@(Context adtMap constructorMap typeMap exprMap argList log) = 
   case Map.lookup varname typeMap of
-    Just (t:ts) -> Context adtMap constructorMap (Map.update (\xs -> Just $ init xs) varname typeMap) exprMap argList log
-    Just [t] -> Context adtMap constructorMap (Map.delete varname typeMap) exprMap argList log
+    Just (t:ts) -> mytrace ("*** delete type: " ++ varname) Context adtMap constructorMap (Map.update (\xs -> Just $ init xs) varname typeMap) exprMap argList log
+    Just [t] -> mytrace ("*** delete type: " ++ varname) Context adtMap constructorMap (Map.delete varname typeMap) exprMap argList log
 
 
 -- expr binding context operations
@@ -112,13 +113,13 @@ deleteExpr varname context@(Context adtMap constructorMap typeMap exprMap argLis
 
 -- argument stack for lambda expression
 pushArg :: Expr -> Context -> Context
-pushArg e (Context adtMap constructorMap typeMap exprMap argList log) = mytrace ("pushing expr:" ++ (show e)) Context adtMap constructorMap typeMap exprMap (e:argList) log
+pushArg e (Context adtMap constructorMap typeMap exprMap argList log) = mytrace ("### pushing arg:" ++ (show e)) Context adtMap constructorMap typeMap exprMap (e:argList) log
 
 emptyArg :: Context -> Bool
 emptyArg (Context adtMap constructorMap typeMap exprMap argList log) = null argList
 
 firstArg :: Context -> Expr
-firstArg (Context adtMap constructorMap typeMap exprMap argList log) = head argList
+firstArg (Context adtMap constructorMap typeMap exprMap argList log) = mytrace ("### first arg:" ++ (show $ head argList)) head argList
 
 popArg :: Context -> Context
 popArg (Context adtMap constructorMap typeMap exprMap argList log) = Context adtMap constructorMap typeMap exprMap (tail argList) log
