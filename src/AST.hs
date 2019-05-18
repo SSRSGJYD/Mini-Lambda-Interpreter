@@ -5,7 +5,8 @@ module AST
   , Expr (..)
   , ADT (..)
   , Program (..)
-  , Result (..) ) where
+  , Result (..)
+  , Value(..) ) where
 
 
 -- |你的语言里的类型（type），包括基本数据类型、函数类型以及代数数据类型。
@@ -226,10 +227,18 @@ data Result
   | RChar Char
   -- ^存放字符类型求值结果。
 
-  | RData String [Result]
+  | RData String String [Result] -- RData adtname constructor [result]
   -- ADT类型的求值结果
   
   | RInvalid
   -- ^不合法的求值结果，包括 1. 求值发生错误；2. 求值结果并非布尔类型、有限精度整数类型、字符类型。
 
   deriving (Show, Eq)
+
+
+data Value
+  = VBool Bool
+  | VInt Int
+  | VChar Char
+  | VData String String [Value] -- VData adtname constructor [value]
+  deriving (Show, Eq, Ord)

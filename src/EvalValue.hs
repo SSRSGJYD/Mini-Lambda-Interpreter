@@ -9,16 +9,7 @@ import Control.Monad.State
 import EvalType
 import qualified Data.Map as Map
 import Util
-
-
-data Value
-
-  = VBool Bool
-  | VInt Int
-  | VChar Char
-  | VData String [Value]
-  -- ... more
-  deriving (Show, Eq, Ord)
+import Pattern
 
 
 getBool :: Expr -> ContextState Bool
@@ -182,17 +173,18 @@ eval (EApply e1 e2) = do
 
 -- case
 eval (ECase e list) = do
+  ev <- EvalValue.eval e
   case list of
     (p : ps) -> do 
-                  ebool <- matchPattern (fst p) e
-                  if ebool
-                  then do
-                    modify (bindPattern (fst p) e)
-                    ev <- mytrace ("[ECase] EvalValue.eval: " ++ (show $ snd p)) EvalValue.eval (snd p)
-                    modify (unbindPattern (fst p))
-                    return ev
-                  else
-                    mytrace ("[ECase] EvalValue.eval: " ++ (show $ ECase e ps)) EvalValue.eval (ECase e ps)
+      ebool <- matchPattern (fst p) ev
+      if ebool
+      then do
+        modify (bindPattern (fst p) ev)
+        result <- mytrace ("[ECase] EvalValue.eval: " ++ (show $ snd p)) EvalValue.eval (snd p)
+        modify (unbindPattern (fst p))
+        return result
+      else
+        mytrace ("[ECase] EvalValue.eval: " ++ (show $ ECase e ps)) EvalValue.eval (ECase e ps)
     _ -> lift Nothing
 
 -- ADT constructor, similar to multi-lambda expression
@@ -203,7 +195,7 @@ eval (EConstructor constructor argList) = do
       if length argList == length typeList
       then do
         evs <- mytrace ("[EConstructor] evalExprList: " ++ show argList) evalExprList argList
-        return $ VData adtname evs
+        return $ VData adtname constructor evs
       else 
         if emptyArg context
           then lift Nothing
@@ -224,62 +216,6 @@ evalExprList (e:es) = do
   esv <- evalExprList es
   return $ (ev:esv)
 
-matchPatterns :: [Pattern] -> [Expr] -> ContextState Bool
-matchPatterns [] [] = return True
-matchPatterns _ [] = return False
-matchPatterns [] _ = return False
-matchPatterns (p:ps') (e:es') = do
-  ebool <- matchPattern p e
-  if ebool
-  then matchPatterns ps' es' 
-  else return False
-    
-matchPattern :: Pattern -> Expr -> ContextState Bool
-matchPattern p e = do
-  ev <- EvalValue.eval e
-  case p of
-    PBoolLit x -> return $ ev == VBool x
-    PIntLit x -> return $ ev == VInt x
-    PCharLit x -> return $ ev == VChar x
-    PVar varname -> return $ True
-    PData constructor [] -> case e of
-                              EVar funcname -> return $ constructor == funcname
-                              _ -> return False
-    PData constructor patterns -> case e of
-                        EApply efunc earg -> do 
-                                              ebool <- matchPattern (last patterns) earg
-                                              if ebool
-                                              then matchPattern (PData constructor $ init patterns) efunc
-                                              else return False 
-                        _ -> return False
-    _ -> return False 
-
-bindPattern :: Pattern -> Expr -> Context -> Context
-bindPattern p e context = 
-  case p of
-    PBoolLit x -> context
-    PIntLit x -> context
-    PCharLit x -> context
-    PVar varname -> insertExpr varname e context
-    PData constructor [] -> context
-    PData constructor patterns -> case e of
-      EApply efunc earg -> let context' = bindPattern (last patterns) earg context
-                           in bindPattern (PData constructor $ init patterns) efunc context'
-      _ -> context
-    _ -> context
-
-unbindPattern :: Pattern -> Context -> Context
-unbindPattern p context = 
-  case p of
-    PBoolLit x -> context
-    PIntLit x -> context
-    PCharLit x -> context
-    PVar varname -> deleteExpr varname context
-    PData constructor [] -> context
-    PData constructor patterns -> let context' = unbindPattern (last patterns) context
-                                  in unbindPattern (PData constructor $ init patterns) context'
-    _ -> context
-
 
 evalProgram :: Program -> Maybe Value
 evalProgram (Program adts body) = evalStateT (EvalValue.eval body) $
@@ -296,20 +232,9 @@ evalValue p = case evalProgram p of
   Just v -> parseValueToResult v
   Nothing -> RInvalid
 
-parseValueToResults :: [Value] -> [Result]
-parseValueToResults [] = []
-parseValueToResults (v:vs) = parseValueToResult v : parseValueToResults vs
 
-parseValueToResult :: Value -> Result
-parseValueToResult v = case v of
-  VBool b -> RBool b
-  VInt i -> RInt i
-  VChar c -> RChar c
-  VData adtname argList -> RData adtname $ parseValueToResults argList
-  _ -> RInvalid
-
-printStateLogs :: Program -> IO ()
-printStateLogs (Program adts body) = 
+evalProgramWithLogs :: Program -> IO ()
+evalProgramWithLogs (Program adts body) = 
   let ms = execStateT (EvalValue.eval body) $
             Context { adtMap = initAdtMap adts, 
                       constructorMap = initConstructorMap adts,
