@@ -16,6 +16,7 @@ data Value
   = VBool Bool
   | VInt Int
   | VChar Char
+  | VData String [Value]
   -- ... more
   deriving (Show, Eq, Ord)
 
@@ -136,18 +137,21 @@ eval (ELambda (varname, vartype) e) = do
       modify (deleteType varname)
       return result
 
+-- let
 eval (ELet (varname, e1) e2) = do
   modify (insertExpr varname e1)
   t <- mytrace ("[ELet] EvalValue.eval: " ++ (show e2)) EvalValue.eval e2
   modify (deleteExpr varname)
   return t
 
+-- letrec
 eval (ELetRec funcname (argname,argtype) (funcExpr, returntype) expr) = do
   modify (insertExpr funcname (ELambda (argname, argtype) funcExpr))
   t <- mytrace ("[ELetRec] EvalValue.eval: " ++ (show expr)) EvalValue.eval expr
   modify (deleteExpr funcname)
   return t
 
+-- variable
 eval (EVar varname) = do
   context <- get
   case lookupExpr context varname of 
@@ -156,8 +160,9 @@ eval (EVar varname) = do
           ev <- mytrace ("[EVar] EvalValue.eval: " ++ (show e)) EvalValue.eval e
           modify (insertExpr varname e)
           return ev
-      Nothing -> lift Nothing
+      Nothing -> lift Nothing -- ADT constructor should not fall here
 
+-- function apply
 eval (EApply e1 e2) = do
   case e1 of 
     ELambda (varname, _) e -> mytrace ("[EApply] EvalValue.eval: " ++ (show $ ELet (varname, e2) e)) EvalValue.eval $ ELet (varname, e2) e
@@ -168,9 +173,14 @@ eval (EApply e1 e2) = do
       context <- get
       case lookupExpr context funcname of
         Just funcexpr -> mytrace ("[EApply] EvalValue.eval: " ++ (show $ EApply funcexpr e2)) EvalValue.eval (EApply funcexpr e2)
-        _ -> lift Nothing
+        _ -> case lookupConstructor context funcname of
+                Just (adtname, argList) -> do
+                  modify (pushArg e2)
+                  mytrace ("[EApply] EvalValue.eval: " ++ (show $ EConstructor funcname [])) EvalValue.eval (EConstructor funcname [])
+                _ -> lift Nothing
     _ -> lift Nothing
 
+-- case
 eval (ECase e list) = do
   case list of
     (p : ps) -> do 
@@ -185,6 +195,34 @@ eval (ECase e list) = do
                     mytrace ("[ECase] EvalValue.eval: " ++ (show $ ECase e ps)) EvalValue.eval (ECase e ps)
     _ -> lift Nothing
 
+-- ADT constructor, similar to multi-lambda expression
+eval (EConstructor constructor argList) = do
+  context <- get
+  case lookupConstructor context constructor of
+    Just (adtname, typeList) -> 
+      if length argList == length typeList
+      then do
+        evs <- mytrace ("[EConstructor] evalExprList: " ++ show argList) evalExprList argList
+        return $ VData adtname evs
+      else 
+        if emptyArg context
+          then lift Nothing
+          else
+            let e = firstArg context in do
+              et <- EvalType.eval e
+              if et == typeList !! (length argList)
+              then do
+                modify popArg
+                mytrace ("[EConstructor] EvalValue.eval" ++ show (EConstructor constructor (argList ++ [e]))) EvalValue.eval $ EConstructor constructor (argList ++ [e])
+              else lift Nothing
+
+
+evalExprList :: [Expr] -> ContextState [Value]
+evalExprList [] = return []
+evalExprList (e:es) = do
+  ev <- EvalValue.eval e
+  esv <- evalExprList es
+  return $ (ev:esv)
 
 matchPatterns :: [Pattern] -> [Expr] -> ContextState Bool
 matchPatterns [] [] = return True
@@ -246,6 +284,7 @@ unbindPattern p context =
 evalProgram :: Program -> Maybe Value
 evalProgram (Program adts body) = evalStateT (EvalValue.eval body) $
   Context { adtMap = initAdtMap adts, 
+            constructorMap = initConstructorMap adts,
             typeMap = Map.empty, 
             exprMap = Map.empty,
             argList = [],
@@ -254,11 +293,20 @@ evalProgram (Program adts body) = evalStateT (EvalValue.eval body) $
 
 evalValue :: Program -> Result
 evalValue p = case evalProgram p of
-  Just (VBool b) -> RBool b
-  Just (VInt i) -> RInt i
-  Just (VChar c) -> RChar c
-  _ -> RInvalid
+  Just v -> parseValueToResult v
+  Nothing -> RInvalid
 
+parseValueToResults :: [Value] -> [Result]
+parseValueToResults [] = []
+parseValueToResults (v:vs) = parseValueToResult v : parseValueToResults vs
+
+parseValueToResult :: Value -> Result
+parseValueToResult v = case v of
+  VBool b -> RBool b
+  VInt i -> RInt i
+  VChar c -> RChar c
+  VData adtname argList -> RData adtname $ parseValueToResults argList
+  _ -> RInvalid
 
 printStateLogs :: Program -> IO ()
 printStateLogs (Program adts body) = 

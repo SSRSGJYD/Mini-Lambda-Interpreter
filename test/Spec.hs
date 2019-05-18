@@ -302,6 +302,12 @@ test_adt_type =
   ] $
   EApply (EVar "tuple3") (EIntLit 1)
 
+test_adt_value =
+  Program
+  [ ADT "tuple3" [("tuple3", [TInt, TInt, TInt])]
+  ] $
+  EApply (EApply (EApply (EVar "tuple3") (EIntLit 1)) (EIntLit 2)) (EIntLit 3)
+
 
 main :: IO ()
 main = do
@@ -376,7 +382,10 @@ main = do
   -- print $ EvalType.evalType test_case_var
   -- print $ EvalValue.evalValue test_case_var
 
-  print $ EvalType.evalType test_adt_type
+  -- print $ EvalType.evalType test_adt_type
+  print $ EvalType.evalType test_adt_value
+  print $ EvalValue.evalValue test_adt_value
+
 
   -- print $ EvalValue.evalValue test_fbi
   -- print $ EvalValue.evalValue test_sum3
