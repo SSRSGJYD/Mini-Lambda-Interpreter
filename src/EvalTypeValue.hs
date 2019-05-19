@@ -59,7 +59,7 @@ getBool :: Expr -> ContextState Bool
 getBool e = do
   ev <- eval e
   case snd ev of
-    VBool b -> b
+    VBool b -> return b
     _ -> lift Nothing
 
 getInt :: Expr -> ContextState Int
@@ -180,7 +180,7 @@ eval (ELambda (varname, vartype) e) = do
     let e' = firstArg context in do
       modify popArg
       modify (insertType varname vartype)
-      ev <- eval e'
+      ev <- mytrace ("[ELambda] eval: " ++ show e') eval e'
       let e'' = wrapValueToExpr $ snd ev
       result <- mytrace ("[ELambda] eval: " ++ show (ELet (varname, e'') e)) eval $ ELet (varname, e'') e
       modify (deleteType varname)
@@ -238,8 +238,8 @@ eval (EApply e1 e2) =
         Just e -> do
           ev <- mytrace ("[EApply] eval: " ++ show (EApply e e2)) eval (EApply e e2)
           case lookupType context funcname of
-            Just t -> 
-                if t == fst ev
+            Just t -> -- critical point!! check result of applied lambda expression
+                if evalLambdaResultType t == fst ev
                 then return ev
                 else lift Nothing
             _ -> return ev
@@ -270,21 +270,42 @@ eval (ECase e list) = do
 eval (EConstructor constructor argList) = do
   context <- get
   case lookupConstructor context constructor of
-    Just (adtname, typeList) -> 
-      if length argList == length typeList
-      then do
-        evs <- mytrace ("[EConstructor] evalExprList: " ++ show argList) evalExprList argList
-        return (TData adtname, VData adtname constructor $ evs)
-      else 
+    Just (adtname, typeList)
+      | length argList == length typeList ->
+        do
+          evs <- mytrace ("[EConstructor] evalExprList: " ++ show argList) evalExprList argList
+          return (TData adtname, VData adtname constructor evs)
+      | otherwise ->
         if emptyArg context
-          then lift Nothing
+          then do
+            et <- evalApplyMultiArgsFuncType argList $ evalMultiArgsFuncType typeList (TData adtname)
+            return (et, VInvalid)
           else
             let e = firstArg context in do  
               modify popArg
               ev <- eval e
               let e' = wrapValueToExpr $ snd ev
               mytrace ("[EConstructor] eval: " ++ show (EConstructor constructor (argList ++ [e']))) eval $ EConstructor constructor (argList ++ [e'])
-              
+    _ -> lift Nothing
+   
+
+evalMultiArgsFuncType :: [Type] -> Type -> Type
+evalMultiArgsFuncType argTypes returnType = case argTypes of
+  [] -> returnType
+  (t:ts) -> TArrow t $ evalMultiArgsFuncType ts returnType
+    
+
+evalApplyMultiArgsFuncType :: [Expr] -> Type -> ContextState Type
+evalApplyMultiArgsFuncType argTypes funcType =
+  case argTypes of
+    [] -> return funcType
+    (arg : args) -> case funcType of
+        TArrow t1 t2 -> do
+          et <- mytrace ("[EConstructor] EvalType.eval: " ++ show arg) eval arg
+          if fst et == t1
+          then evalApplyMultiArgsFuncType args t2
+          else lift Nothing
+        _ -> lift Nothing
 
 evalExprList :: [Expr] -> ContextState [Value]
 evalExprList [] = return []

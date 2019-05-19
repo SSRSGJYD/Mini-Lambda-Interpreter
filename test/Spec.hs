@@ -15,22 +15,20 @@ callFun f [e] = EApply f e
 callFun f (e:es) = callFun (EApply f e) es
 
 
--- | It can terminate under short-circuit evaluation.
--- It doesn't terminate under strict evaluation.
-tRaw_06_and =
+tRaw_08_apply =
   Program [] $
 
-  makeFun ("test", TBool) [("x", TBool)]
+  makeFun ("sum3", TInt) [("x1", TInt), ("x2", TInt), ("x3", TInt)]
   (
-    EOr (EVar "x") (callFun (EVar "test") [EBoolLit False])
+    EAdd (EAdd (EVar "x1") (EVar "x2")) (EVar "x3")
   ) $
 
-  callFun (EVar "test") [EBoolLit True]
+  callFun (EVar "sum3") [EIntLit 1, EIntLit 1, EIntLit 1, EIntLit 1]
 
 main :: IO ()
 main = do
   putStrLn " ---------- make `stack test` looks prettier ----------"
   
   -- print $ EvalValue.evalValue tRaw_01_lcm
-  print $ EvalType.evalType tRaw_06_and
+  print $ EvalType.evalType tRaw_08_apply
 

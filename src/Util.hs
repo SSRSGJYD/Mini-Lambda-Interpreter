@@ -30,3 +30,8 @@ parseValueToType v = case v of
     VChar _ -> Just TChar
     VData adtname constructor argList -> Just $ TData adtname
     _ -> Nothing
+
+evalLambdaResultType :: Type -> Type
+evalLambdaResultType t = case t of
+    TArrow t1 t2 -> evalLambdaResultType t2
+    t -> t

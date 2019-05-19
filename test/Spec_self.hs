@@ -355,7 +355,7 @@ main = do
   -- print $ EvalValue.evalValue test_if_different_type 
   -- print $ EvalValue.evalValue test_if_value
 
-  -- print $ EvalType.evalType test_lambda_type
+  -- print $ EvalType.evalType test_lambda_type -- failed!!!
 
   -- print $ EvalType.evalType test_let
   -- print $ EvalValue.evalValue test_let

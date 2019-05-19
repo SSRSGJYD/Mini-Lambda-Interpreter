@@ -241,4 +241,5 @@ data Value
   | VInt Int
   | VChar Char
   | VData String String [Value] -- VData adtname constructor [value]
+  | VInvalid
   deriving (Show, Eq, Ord)
