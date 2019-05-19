@@ -228,13 +228,15 @@ import EvalTypeValue
 
 evalType :: Program -> Maybe Type
 evalType (Program adts body) = do
-  mv <- evalStateT (eval body) $
+  msa <- runStateT (eval body) $
           Context { adtMap = initAdtMap adts, 
                     constructorMap = initConstructorMap adts,
                     typeMap = Map.empty, 
                     exprMap = Map.empty,
                     argList = [],
                     logList = ["start EvalType Program"] }
-  case mv of 
-    (t, v) -> Just t
+  case msa of 
+    ((t,v), s) -> if countArg s == 0
+              then return t
+              else Nothing
     _ -> Nothing

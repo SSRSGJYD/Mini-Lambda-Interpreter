@@ -223,15 +223,17 @@ import EvalTypeValue
 
 evalProgram :: Program -> Maybe Value
 evalProgram (Program adts body) = do
-  mv <- evalStateT (eval body) $
+  msa <- runStateT (eval body) $
           Context { adtMap = initAdtMap adts, 
                     constructorMap = initConstructorMap adts,
                     typeMap = Map.empty, 
                     exprMap = Map.empty,
                     argList = [],
                     logList = ["start EvalValue Program"] } -- 可以用某种方式定义上下文，用于记录变量绑定状态
-  case mv of 
-    (t, v) -> Just v
+  case msa of 
+    ((t,v),s) -> if countArg s == 0
+              then return v
+              else Nothing
     _ -> Nothing
 
 

@@ -245,8 +245,15 @@ eval (EApply e1 e2) =
             _ -> return ev
         _ -> case lookupConstructor context funcname of
                 Just (adtname, argList) -> do
+                  context <- get
+                  let countArg1 = countArg context
                   modify (pushArg e2)
-                  mytrace ("[EApply] eval: " ++ show (EConstructor funcname [])) eval (EConstructor funcname [])
+                  ev <- mytrace ("[EApply] eval: " ++ show (EConstructor funcname [])) eval (EConstructor funcname [])
+                  context <- get
+                  let countArg2 = countArg context
+                  if countArg1 == countArg2
+                  then return ev
+                  else lift Nothing
                 _ -> lift Nothing
     _ -> lift Nothing
 

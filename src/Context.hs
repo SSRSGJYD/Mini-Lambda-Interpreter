@@ -124,6 +124,10 @@ firstArg (Context adtMap constructorMap typeMap exprMap argList log) = mytrace (
 popArg :: Context -> Context
 popArg (Context adtMap constructorMap typeMap exprMap argList log) = Context adtMap constructorMap typeMap exprMap (tail argList) log
 
+countArg :: Context -> Int
+countArg context = length $ argList context
+
+
 -- log operations
 prependLog :: String -> Context -> Context
 prependLog newLog (Context adtMap constructorMap typeMap exprMap argList log) = Context adtMap constructorMap typeMap exprMap argList (newLog:log)
