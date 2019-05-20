@@ -43,6 +43,8 @@ library
     , base >=4.7 && <5
     , containers
     , mtl
+    , megaparsec
+    , parser-combinators
   default-language: Haskell2010
 
 executable fpproject-exe
@@ -58,6 +60,8 @@ executable fpproject-exe
     , containers
     , fpproject
     , mtl
+    , megaparsec
+    , parser-combinators
   default-language: Haskell2010
 
 test-suite fpproject-test
@@ -74,4 +78,6 @@ test-suite fpproject-test
     , containers
     , fpproject
     , mtl
+    , megaparsec
+    , parser-combinators
   default-language: Haskell2010

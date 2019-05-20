@@ -122,7 +122,7 @@ firstArg :: Context -> Expr
 firstArg (Context adtMap constructorMap typeMap exprMap argList log) = mytrace ("### first arg:" ++ (show $ head argList)) head argList
 
 popArg :: Context -> Context
-popArg (Context adtMap constructorMap typeMap exprMap argList log) = Context adtMap constructorMap typeMap exprMap (tail argList) log
+popArg (Context adtMap constructorMap typeMap exprMap argList log) = mytrace ("### poping arg:" ++ show (head argList)) Context adtMap constructorMap typeMap exprMap (tail argList) log
 
 countArg :: Context -> Int
 countArg context = length $ argList context

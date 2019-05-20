@@ -1,6 +1,3 @@
--- | 这是其中一种实现方式的代码框架。你可以参考它，或用你自己的方式实现，只要按需求完成 evalValue :: Program -> Result 就行。
-{-# LANGUAGE BangPatterns #-}
-
 module EvalValue where
 
 import AST
@@ -121,11 +118,11 @@ eval (ELambda (varname, vartype) e) = do
   else
     let e' = firstArg context in do
       modify popArg
-      modify (insertType varname vartype)
+      -- modify (insertType varname vartype)
       ev <- EvalValue.eval e'
       let e'' = wrapValueToExpr ev
       result <- mytrace ("[ELambda] EvalValue.eval: " ++ (show $ ELet (varname, e'') e)) EvalValue.eval $ ELet (varname, e'') e
-      modify (deleteType varname)
+      -- modify (deleteType varname)
       return result
 
 -- let
@@ -147,9 +144,9 @@ eval (EVar varname) = do
   context <- get
   case lookupExpr context varname of 
       Just e -> do
-          modify (deleteExpr varname)
+          -- modify (deleteExpr varname)
           ev <- mytrace ("[EVar] EvalValue.eval: " ++ (show e)) EvalValue.eval e
-          modify (insertExpr varname e)
+          -- modify (insertExpr varname e)
           return ev
       Nothing ->  -- ADT constructor without arguments
           case lookupConstructor context varname of
