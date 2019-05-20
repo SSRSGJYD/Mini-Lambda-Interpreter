@@ -15,20 +15,45 @@ callFun f [e] = EApply f e
 callFun f (e:es) = callFun (EApply f e) es
 
 
-tRaw_08_apply =
+tRaw_02_church0 =
   Program [] $
 
-  makeFun ("sum3", TInt) [("x1", TInt), ("x2", TInt), ("x3", TInt)]
-  (
-    EAdd (EAdd (EVar "x1") (EVar "x2")) (EVar "x3")
-  ) $
+  ELet ("zero", ELambda ("f", TArrow TInt TInt)
+                (ELambda ("x", TInt) (EVar "x"))) $
+  ELet ("succ", ELambda ("n", TArrow (TArrow TInt TInt) (TArrow TInt TInt))
+                (ELambda ("f", TArrow TInt TInt)
+                  (ELambda ("x", TInt)
+                    (EApply (EVar "f")
+                      (callFun (EVar "n") [EVar "f", EVar "x"]))))) $
+  -- plus = \a b f x -> a f (b f x)
+  ELet ("plus", ELambda ("a", TArrow (TArrow TInt TInt) (TArrow TInt TInt))
+                (ELambda ("b", TArrow (TArrow TInt TInt) (TArrow TInt TInt))
+                  (ELambda ("f", TArrow TInt TInt)
+                    (ELambda ("x", TInt)
+                      (ELet ("af", EApply (EVar "a") (EVar "f"))
+                        (ELet ("bf", EApply (EVar "b") (EVar "f"))
+                          (EApply (EVar "af") (EApply (EVar "bf") (EVar "x"))))))))) $
+  -- mult = \a b f -> b (a f)
+  ELet ("mult", ELambda ("a", TArrow (TArrow TInt TInt) (TArrow TInt TInt))
+                (ELambda ("b", TArrow (TArrow TInt TInt) (TArrow TInt TInt))
+                  (ELambda ("f", TArrow TInt TInt)
+                    (EApply (EVar "b") (EApply (EVar "a") (EVar "f")))))) $
 
-  callFun (EVar "sum3") [EIntLit 1, EIntLit 1, EIntLit 1, EIntLit 1]
+  ELet ("f", ELambda ("x", TInt) (EAdd (EVar "x") (EIntLit 1))) $
+  ELet ("one", EApply (EVar "succ") (EVar "zero")) $
+  ELet ("two", EApply (EVar "succ") (EVar "one")) $
+  ELet ("three", EApply (EVar "succ") (EVar "two")) $
+  ELet ("five", callFun (EVar "plus") [EVar "two", EVar "three"]) $
+  ELet ("six", callFun (EVar "mult") [EVar "two", EVar "three"]) $
+  EAdd
+  (callFun (EVar "six") [EVar "f", EIntLit 0])
+  (callFun (EVar "five") [EVar "f", EIntLit 0])
 
+  
 main :: IO ()
 main = do
   putStrLn " ---------- make `stack test` looks prettier ----------"
   
   -- print $ EvalValue.evalValue tRaw_01_lcm
-  print $ EvalType.evalType tRaw_08_apply
+  print $ EvalType.evalType tRaw_02_church0
 

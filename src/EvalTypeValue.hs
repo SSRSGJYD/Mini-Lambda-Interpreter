@@ -76,106 +76,184 @@ eval (ECharLit c) = return (TChar, VChar c)
 
 eval (ENot e) = getBool e >>= \b -> return (TBool, VBool $ not b)
 eval (EAnd e1 e2) = do
-  ev1 <- getBool e1
-  if not ev1
-  then return (TBool, VBool False)
-  else 
-    do
-      ev2 <- getBool e2
-      return (TBool, VBool ev2)
+  ev1 <- eval e1
+  if fst ev1 /= TBool
+  then lift Nothing
+  else case snd ev1 of
+    VBool False -> return (TBool, VBool False)
+    VBool True -> do
+      ev2 <- eval e2
+      if fst ev2 /= TBool
+      then lift Nothing
+      else case snd ev2 of
+        VBool False -> return (TBool, VBool False)
+        VBool True -> return (TBool, VBool True)
+        _ -> return (TBool, VInvalid)
+    _-> return (TBool, VInvalid)
 
 eval (EOr e1 e2) = do
-  ev1 <- getBool e1
-  if ev1
-  then return (TBool, VBool True)
-  else 
-    do
-      ev2 <- getBool e2
-      return (TBool, VBool ev2)
+  ev1 <- eval e1
+  if fst ev1 /= TBool
+  then lift Nothing
+  else case snd ev1 of
+    VBool True -> return (TBool, VBool True)
+    VBool False -> do
+      ev2 <- eval e2
+      if fst ev2 /= TBool
+      then lift Nothing
+      else case snd ev2 of
+        VBool False -> return (TBool, VBool False)
+        VBool True -> return (TBool, VBool True)
+        _ -> return (TBool, VInvalid)
+    _-> return (TBool, VInvalid)
 
 eval (EAdd e1 e2) = do
-  ev1 <- getInt e1
-  ev2 <- getInt e2
-  return (TInt, VInt $ ev1 + ev2)
+  ev1 <- eval e1
+  if fst ev1 /= TInt
+  then lift Nothing
+  else case snd ev1 of
+    VInt i1 -> do
+      ev2 <- eval e2
+      if fst ev2 /= TInt
+      then lift Nothing
+      else case snd ev2 of
+        VInt i2 -> return (TInt, VInt $ i1 + i2)
+        _ -> return (TInt, VInvalid)
+    _-> return (TInt, VInvalid)
 
 eval (ESub e1 e2) = do
-  ev1 <- getInt e1
-  ev2 <- getInt e2
-  return (TInt, VInt $ ev1 - ev2)
+  ev1 <- eval e1
+  if fst ev1 /= TInt
+  then lift Nothing
+  else case snd ev1 of
+    VInt i1 -> do
+      ev2 <- eval e2
+      if fst ev2 /= TInt
+      then lift Nothing
+      else case snd ev2 of
+        VInt i2 -> return (TInt, VInt $ i1 - i2)
+        _ -> return (TInt, VInvalid)
+    _-> return (TInt, VInvalid)
 
 eval (EMul e1 e2) = do
-  ev1 <- getInt e1
-  ev2 <- getInt e2
-  return (TInt, VInt $ ev1 * ev2)
+  ev1 <- eval e1
+  if fst ev1 /= TInt
+  then lift Nothing
+  else case snd ev1 of
+    VInt i1 -> do
+      ev2 <- eval e2
+      if fst ev2 /= TInt
+      then lift Nothing
+      else case snd ev2 of
+        VInt i2 -> return (TInt, VInt $ i1 * i2)
+        _ -> return (TInt, VInvalid)
+    _-> return (TInt, VInvalid)
 
 eval (EDiv e1 e2) = do
-  ev1 <- getInt e1
-  ev2 <- getInt e2
-  if ev2 == 0
-  then return (TInt, VInt 0)
-  else return (TInt, VInt $ ev1 `div` ev2)
+  ev1 <- eval e1
+  if fst ev1 /= TInt
+  then lift Nothing
+  else case snd ev1 of
+    VInt i1 -> do
+      ev2 <- eval e2
+      if fst ev2 /= TInt
+      then lift Nothing
+      else case snd ev2 of
+        VInt 0 -> return (TInt, VInt 0)
+        VInt i2 -> return (TInt, VInt $ i1 `div` i2)
+        _ -> return (TInt, VInvalid)
+    _-> return (TInt, VInvalid)
 
 eval (EMod e1 e2) = do
-  ev1 <- getInt e1
-  ev2 <- getInt e2
-  if ev2 == 0
-  then return (TInt, VInt 0)
-  else return (TInt, VInt $ ev1 `mod` ev2)
+  ev1 <- eval e1
+  if fst ev1 /= TInt
+  then lift Nothing
+  else case snd ev1 of
+    VInt i1 -> do
+      ev2 <- eval e2
+      if fst ev2 /= TInt
+      then lift Nothing
+      else case snd ev2 of
+        VInt 0 -> return (TInt, VInt 0)
+        VInt i2 -> return (TInt, VInt $ i1 `mod` i2)
+        _ -> return (TInt, VInvalid)
+    _-> return (TInt, VInvalid)
 
 eval (EEq e1 e2) = do
   ev1 <- eval e1
   ev2 <- eval e2
   if fst ev1 == fst ev2
-  then return (TBool, VBool $ snd ev1 == snd ev2)
+  then if isValidValue (snd ev1) && isValidValue (snd ev2)
+       then return (TBool, VBool $ snd ev1 == snd ev2)
+       else return (TBool, VInvalid)
   else lift Nothing
 
 eval (ENeq e1 e2) = do
   ev1 <- eval e1
   ev2 <- eval e2
   if fst ev1 == fst ev2
-  then return (TBool, VBool $ snd ev1 /= snd ev2)
+  then if isValidValue (snd ev1) && isValidValue (snd ev2)
+       then return (TBool, VBool $ snd ev1 /= snd ev2)
+       else return (TBool, VInvalid)
   else lift Nothing
 
 eval (ELt e1 e2) = do
   ev1 <- eval e1
   ev2 <- eval e2
   if fst ev1 == fst ev2 && isComparableType (fst ev1)
-  then return (TBool, VBool $ snd ev1 < snd ev2)
+  then if isValidValue (snd ev1) && isValidValue (snd ev2)
+       then return (TBool, VBool $ snd ev1 < snd ev2)
+       else return (TBool, VInvalid)
   else lift Nothing
 
 eval (EGt e1 e2) = do
   ev1 <- eval e1
   ev2 <- eval e2
   if fst ev1 == fst ev2 && isComparableType (fst ev1)
-  then return (TBool, VBool $ snd ev1 > snd ev2)
+  then if isValidValue (snd ev1) && isValidValue (snd ev2)
+       then return (TBool, VBool $ snd ev1 > snd ev2)
+       else return (TBool, VInvalid)
   else lift Nothing
 
 eval (ELe e1 e2) = do
   ev1 <- eval e1
   ev2 <- eval e2
   if fst ev1 == fst ev2 && isComparableType (fst ev1)
-  then return (TBool, VBool $ snd ev1 <= snd ev2)
+  then if isValidValue (snd ev1) && isValidValue (snd ev2)
+       then return (TBool, VBool $ snd ev1 <= snd ev2)
+       else return (TBool, VInvalid)
   else lift Nothing
 
 eval (EGe e1 e2) = do
   ev1 <- eval e1
   ev2 <- eval e2
   if fst ev1 == fst ev2 && isComparableType (fst ev1)
-  then return (TBool, VBool $ snd ev1 >= snd ev2)
+  then if isValidValue (snd ev1) && isValidValue (snd ev2)
+       then return (TBool, VBool $ snd ev1 >= snd ev2)
+       else return (TBool, VInvalid)
   else lift Nothing
     
 eval (EIf e1 e2 e3) = do
   ev1 <- eval e1
-  case snd ev1 of
-    VBool True -> mytrace ("[if condition true] eval: " ++ show e2) eval e2
-    VBool False -> mytrace ("[if condition false] eval: " ++ show e3) eval e3
-    _ -> lift Nothing
+  ev2 <- eval e2
+  ev3 <- eval e3
+  if fst ev2 == fst ev3
+  then
+    case snd ev1 of
+      VBool True -> mytrace ("[if condition true] eval: " ++ show e2) eval e2
+      VBool False -> mytrace ("[if condition false] eval: " ++ show e3) eval e3
+      _ -> lift Nothing
+  else lift Nothing
 
 -- Lambda
 eval (ELambda (varname, vartype) e) = do
   context <- get
   if emptyArg context
-  then lift Nothing
+  then do -- try to provide type info
+    modify (insertType varname vartype)
+    ev <- mytrace ("[ELambda] evalType: " ++ show e) eval e
+    modify (deleteType varname)
+    return (TArrow vartype $ fst ev, VInvalid)
   else
     let e' = firstArg context in do
       modify popArg
@@ -206,7 +284,7 @@ eval (ELetRec funcname (argname,argtype) (funcExpr, returntype) expr) = do
 -- variable
 eval (EVar varname) = do
   context <- get
-  case lookupExpr context varname of 
+  case lookupExpr context varname of
       Just e -> do
           modify (deleteExpr varname)
           ev <- mytrace ("[EVar] eval: " ++ show e) eval e
@@ -220,8 +298,10 @@ eval (EVar varname) = do
       Nothing ->  -- ADT constructor without arguments
           case lookupConstructor context varname of
               Just (adtname, _) ->
-                mytrace ("[EVar] eval: " ++ show (EConstructor varname [])) eval (EConstructor varname [])
-              _ -> lift Nothing
+                  mytrace ("[EVar] eval: " ++ show (EConstructor varname [])) eval (EConstructor varname [])
+              _ -> case lookupType context varname of
+                      Just t -> return (t, VInvalid)
+                      _ -> lift Nothing
 
 -- function apply
 eval (EApply e1 e2) = 
@@ -229,6 +309,9 @@ eval (EApply e1 e2) =
     ELambda e3@(varname, _) e4 -> do
       modify (pushArg e2)
       mytrace ("[EApply] eval: " ++ show (ELambda e3 e4)) eval $ ELambda e3 e4
+      -- case fst ev of
+      --   TArrow t1 t2 -> return (t2, snd ev)
+      --   _ -> lift Nothing
     EApply e3 e4 -> do
       modify (pushArg e2)
       mytrace ("[EApply] eval: " ++ show e1) eval e1
@@ -254,7 +337,13 @@ eval (EApply e1 e2) =
                   if countArg1 == countArg2
                   then return ev
                   else lift Nothing
-                _ -> lift Nothing
+                _ -> case lookupType context funcname of
+                  Just (TArrow t1 t2) -> do
+                    ev' <- eval e2
+                    if fst ev' == t1
+                    then return (t2, VInvalid)
+                    else lift Nothing
+                  _ -> lift Nothing
     _ -> lift Nothing
 
 -- case

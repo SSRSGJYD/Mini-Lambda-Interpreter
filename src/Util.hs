@@ -4,8 +4,8 @@ import AST
 import Debug.Trace
 
 mytrace :: String -> a -> a
--- mytrace = trace -- for debugging
-mytrace str x = x
+mytrace = trace -- for debugging
+-- mytrace str x = x
 
 
 wrapValueToExpr :: Value -> Expr
@@ -35,3 +35,8 @@ evalLambdaResultType :: Type -> Type
 evalLambdaResultType t = case t of
     TArrow t1 t2 -> evalLambdaResultType t2
     t -> t
+
+isValidValue :: Value -> Bool
+isValidValue v = case v of
+    VInvalid -> False
+    _ -> True

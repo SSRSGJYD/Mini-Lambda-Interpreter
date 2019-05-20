@@ -72,7 +72,7 @@ containType context varname = Map.member varname (typeMap context)
 lookupType :: Context -> String -> Maybe Type
 lookupType context varname = mytrace ("*** lookup type: " ++ varname ++ " == " ++ show e) e
   where e = case Map.lookup varname (typeMap context) of
-              Just types ->  Just $ head types
+              Just types -> Just $ head types
               _ -> Nothing
 
 insertType :: String -> Type -> Context -> Context
@@ -84,9 +84,9 @@ insertType varname mtype context@(Context adtMap constructorMap typeMap exprMap 
 deleteType :: String -> Context -> Context
 deleteType varname context@(Context adtMap constructorMap typeMap exprMap argList log) = 
   case Map.lookup varname typeMap of
-    Just (t:ts) -> mytrace ("*** delete type: " ++ varname) Context adtMap constructorMap (Map.update (\xs -> Just $ init xs) varname typeMap) exprMap argList log
+    Just (t1:t2:t3) -> mytrace ("*** delete type: " ++ varname) Context adtMap constructorMap (Map.update (\xs -> Just $ init xs) varname typeMap) exprMap argList log
     Just [t] -> mytrace ("*** delete type: " ++ varname) Context adtMap constructorMap (Map.delete varname typeMap) exprMap argList log
-
+    _ -> mytrace ("*** delete Nothing") context
 
 -- expr binding context operations
 containExpr :: Context -> String -> Bool
@@ -107,7 +107,7 @@ insertExpr varname expr context@(Context adtMap constructorMap typeMap exprMap a
 deleteExpr :: String -> Context -> Context
 deleteExpr varname context@(Context adtMap constructorMap typeMap exprMap argList log) = 
   case Map.lookup varname exprMap of
-    Just (t:t2:t3) -> mytrace ("*** delete expr: " ++ varname) Context adtMap constructorMap typeMap (Map.update (\x -> Just (tail x)) varname exprMap) argList log
+    Just (t1:t2:t3) -> mytrace ("*** delete expr: " ++ varname) Context adtMap constructorMap typeMap (Map.update (\x -> Just (tail x)) varname exprMap) argList log
     Just [t] -> mytrace ("*** delete expr: " ++ varname) Context adtMap constructorMap typeMap (Map.delete varname exprMap) argList log
     _ -> mytrace ("*** delete Nothing") context
 
