@@ -179,5 +179,8 @@ relation = (Greater <$ symbol ">")
 
 main :: IO ()
 main = do
-  input <- getContents
-  parseTest whileParser input
+  -- input <- getContents
+  -- parseTest whileParser input
+  case runParser aExpr "" "1+2" of
+    Left error -> print error
+    Right a -> print a

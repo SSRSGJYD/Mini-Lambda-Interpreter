@@ -35,8 +35,13 @@ symbol = L.symbol sc
 parensParser :: Parser a -> Parser a
 parensParser = between (symbol "(") (symbol ")")
 
+typeParser :: Parser Type
+typeParser = try (TBool <$rword "Bool")
+        <|> try (TInt <$rword "Int")
+        <|> (TChar <$rword "Char")
+
 integerParser :: Parser Int
-integerParser = lexeme L.decimal
+integerParser = (lexeme . try) L.decimal
 
 charParser :: Parser Char
 charParser = between (symbol "\'") (symbol "\'") (lexeme L.charLiteral)
@@ -54,42 +59,43 @@ programParser :: Parser Expr
 programParser = between sc eof exprParser
 
 exprParser :: Parser Expr
-exprParser = boolExprParser
-        <|> integerExprParser
-        <|> charExprParser
-        -- <|> ifExprParser
-        -- <|> letExprParser
-        -- <|> letRecExprParser
-        -- <|> lambdaExprParser
-        -- <|> caseExprParser
-        -- <|> applyExprParser
+exprParser = try boolExprParser
+        <|> try integerExprParser
+        <|> try charExprParser
+        <|> try ifExprParser
+        <|> try letExprParser
+        <|> try whereExprParser
+        <|> try letrecExprParser
+        <|> try lambdaExprParser
+        -- <|> try caseExprParser
+        <|> try applyExprParser
+        <|> try variableExprParser
         <|> parensParser exprParser
 
 boolExprParser :: Parser Expr
-boolExprParser = mytrace "bool expr" makeExprParser boolTermParser boolOperator
+boolExprParser = makeExprParser boolTermParser boolOperator
 
 integerExprParser :: Parser Expr
-integerExprParser = mytrace "integer expr" makeExprParser integerTermParser integerOperator
+integerExprParser = makeExprParser integerTermParser integerOperator
 
 charExprParser :: Parser Expr
-charExprParser = parensParser charExprParser
-        <|> charTermParser
+charExprParser = charTermParser
 
 -- parsers of terms
 boolTermParser :: Parser Expr
-boolTermParser = parensParser boolExprParser
+boolTermParser =  try $ parensParser boolExprParser
         -- <|> EVar <$> identifierParser
-        <|> (EBoolLit True <$ rword "True")
-        <|> (EBoolLit False <$ rword "False")
-        <|> comparisonExprParser
+        <|> try (EBoolLit True <$ rword "True")
+        <|> try (EBoolLit False <$ rword "False")
+        <|>  comparisonExprParser
 
 integerTermParser :: Parser Expr
-integerTermParser = parensParser integerExprParser
+integerTermParser = try $ parensParser integerExprParser
         -- <|> EVar <$> identifierParser
         <|> EIntLit <$> integerParser
 
 charTermParser :: Parser Expr
-charTermParser = parensParser charExprParser
+charTermParser = try $ parensParser charExprParser
         -- <|> EVar <$> identifierParser
         <|> ECharLit <$> charParser
 
@@ -115,20 +121,20 @@ integerOperator =
 
 -- parser of comparision
 comparisonExprParser :: Parser Expr
-comparisonExprParser = boolEqParser
-    <|> boolNeqParser
-    <|> integerEqParser
-    <|> integerNeqParser
-    <|> integerGtParser
-    <|> integerLtParser
-    <|> integerGeParser
-    <|> integerLeParser
-    <|> charEqParser
-    <|> charNeqParser
-    <|> charGtParser
-    <|> charLtParser
-    <|> charGeParser
-    <|> charLeParser
+comparisonExprParser = try boolEqParser
+    <|> try boolNeqParser
+    <|> try integerEqParser
+    <|> try integerNeqParser
+    <|> try integerGtParser
+    <|> try integerLtParser
+    <|> try integerGeParser
+    <|> try integerLeParser
+    <|> try charEqParser
+    <|> try charNeqParser
+    <|> try charGtParser
+    <|> try charLtParser
+    <|> try charGeParser
+    <|>  charLeParser
 
 boolEqParser :: Parser Expr
 boolEqParser = do
@@ -217,7 +223,7 @@ charLtParser = do
 charGeParser :: Parser Expr
 charGeParser = do
     e1 <- charExprParser
-    symbol ">="
+    rword ">="
     e2 <- charExprParser
     return (EGe e1 e2)
 
@@ -229,10 +235,84 @@ charLeParser = do
     return (ELe e1 e2)
 
 
+ifExprParser :: Parser Expr
+ifExprParser = do
+    rword "if"
+    e1 <- boolExprParser
+    rword "then"
+    e2 <- exprParser
+    rword "else"
+    e3 <- exprParser
+    return (EIf e1 e2 e3)
+
+letExprParser :: Parser Expr
+letExprParser = do
+    rword "let"
+    varname <- identifierParser
+    symbol "="
+    e2 <- exprParser
+    rword "in"
+    expr <- exprParser
+    return (ELet (varname, e2) expr)
+
+whereExprParser :: Parser Expr
+whereExprParser = do
+    expr <- exprParser
+    rword "where"
+    varname <- identifierParser
+    symbol "="
+    e2 <- exprParser
+    return (ELet (varname, e2) expr)
+
+letrecExprParser :: Parser Expr
+letrecExprParser = do
+    rword "letrec"
+    returntype <- typeParser
+    rword "def"
+    funcname <- identifierParser
+    symbol "("
+    argname <- identifierParser
+    symbol "::"
+    argtype <- typeParser
+    symbol ")"
+    symbol "{"
+    funcbody <- exprParser
+    symbol "}"
+    rword "in"
+    expr <- exprParser
+    return (ELetRec funcname (argname, argtype) (funcbody, returntype) expr)
+
+lambdaExprParser :: Parser Expr
+lambdaExprParser = do
+    symbol "\\"
+    varname <- identifierParser
+    symbol "::"
+    vartype <- typeParser
+    symbol "->"
+    expr <- exprParser
+    return (ELambda (varname, vartype) expr)
+
+variableExprParser :: Parser Expr
+variableExprParser = do
+    symbol "$"
+    varname <- identifierParser
+    return (EVar varname)
+
+applyExprParser :: Parser Expr
+applyExprParser = do
+    e1 <- exprParser
+    rword  "$"
+    e2 <- exprParser
+    return (EApply e1 e2)
+
 main :: IO ()
-main = do
-  input <- getContents
-  parseTest programParser input
+main = 
+  -- input <- getContents
+  case runParser exprParser "" "1+2" of
+    Left error -> print error
+    Right a -> print a
+  -- parseTest lambdaExprParser "\\x::Int -> $x"
+  -- parseTest letrecExprParser "letrec int def inc(x::int){x+1} in inc 3"
 
 
 

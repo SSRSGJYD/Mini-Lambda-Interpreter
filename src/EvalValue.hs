@@ -6,6 +6,7 @@ import Control.Monad.State
 import qualified Data.Map as Map
 import Util
 import Pattern
+import EvalType
 
 getBool :: Expr -> ContextState Bool
 getBool e = do
@@ -116,14 +117,17 @@ eval (ELambda (varname, vartype) e) = do
   if emptyArg context
   then lift Nothing
   else
-    let e' = firstArg context in do
-      modify popArg
-      -- modify (insertType varname vartype)
-      ev <- EvalValue.eval e'
-      let e'' = wrapValueToExpr ev
-      result <- mytrace ("[ELambda] EvalValue.eval: " ++ (show $ ELet (varname, e'') e)) EvalValue.eval $ ELet (varname, e'') e
-      -- modify (deleteType varname)
-      return result
+    let e' = firstArg context in
+      -- if checkLambda (ELet (varname, e') e) 0 
+      if True
+      then do
+          modify popArg
+          ev <- EvalValue.eval e'
+          let e'' = wrapValueToExpr ev
+          result <- mytrace ("[ELambda] EvalValue.eval: " ++ (show $ ELet (varname, e'') e)) EvalValue.eval $ ELet (varname, e'') e
+          return result
+      else
+          mytrace ("[ELambda] EvalValue.eval: " ++ (show $ ELet (varname, e') e)) EvalValue.eval $ ELet (varname, e') e
 
 -- let
 eval (ELet (varname, e1) e2) = do
@@ -217,7 +221,19 @@ evalExprList (e:es) = do
   esv <- evalExprList es
   return $ (ev:esv)
 
-
+checkLambda :: Expr -> Int -> Bool
+checkLambda e (-1) = False
+checkLambda e n = case e of
+  ELambda (varname, vartype) e' ->
+    checkLambda e' (n-1)
+  EApply e1 e2 -> 
+    checkLambda e1 (n+1)
+  ELet (varname, e1) e2 ->
+    checkLambda e2 n
+  ELetRec funcname (argname,argtype) (funcExpr, returntype) expr -> 
+    checkLambda expr n
+  _ -> True
+  
   
 -- evalProgram :: Program -> Maybe Value
 -- evalProgram (Program adts body) = do

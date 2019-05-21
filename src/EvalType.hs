@@ -4,7 +4,6 @@ import AST
 import Context
 import Control.Monad.State
 import qualified Data.Map as Map
-import EvalValue
 import Util
 
 
