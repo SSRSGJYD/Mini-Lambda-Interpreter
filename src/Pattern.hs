@@ -1,10 +1,10 @@
 module Pattern where
 
 import AST
-import Context
+import ContextV
 import Util
 
-matchPatterns :: [Pattern] -> [Value] -> ContextState Bool
+matchPatterns :: [Pattern] -> [Value] -> ContextStateV Bool
 matchPatterns [] [] = return True
 matchPatterns _ [] = return False
 matchPatterns [] _ = return False
@@ -14,7 +14,7 @@ matchPatterns (p:ps') (ev:evs') = do
   then matchPatterns ps' evs' 
   else return False
     
-matchPattern :: Pattern -> Value -> ContextState Bool
+matchPattern :: Pattern -> Value -> ContextStateV Bool
 matchPattern p ev =
   case p of
     PBoolLit x -> return $ ev == VBool x
@@ -29,19 +29,19 @@ matchPattern p ev =
       _ -> return False
     _ -> return False 
 
-bindPatterns :: [Pattern] -> [Value] -> Context -> Context
+bindPatterns :: [Pattern] -> [Value] -> ContextV -> ContextV
 bindPatterns (p:ps) (v:vs) context = let context' = bindPattern p v context
                                      in bindPatterns ps vs context'
 bindPatterns _ _ context = context
 
 
-bindPattern :: Pattern -> Value -> Context -> Context
+bindPattern :: Pattern -> Value -> ContextV -> ContextV
 bindPattern p ev context = 
   case p of
     PBoolLit x -> context
     PIntLit x -> context
     PCharLit x -> context
-    PVar varname -> insertExpr varname (wrapValueToExpr ev) context
+    PVar varname -> insertExpr varname (wrapValueToExpr ev, context) context
     PData funcname [] -> context
     PData constructor patterns -> case ev of
       VData adtname constructor argList -> bindPatterns patterns argList context
@@ -49,13 +49,13 @@ bindPattern p ev context =
     _ -> context
 
 
-unbindPatterns :: [Pattern] -> Context -> Context
+unbindPatterns :: [Pattern] -> ContextV -> ContextV
 unbindPatterns (p:ps) context = let context' = unbindPattern p context
                                 in unbindPatterns ps context'
 unbindPatterns _ context = context
 
 
-unbindPattern :: Pattern -> Context -> Context
+unbindPattern :: Pattern -> ContextV -> ContextV
 unbindPattern p context = 
   case p of
     PBoolLit x -> context

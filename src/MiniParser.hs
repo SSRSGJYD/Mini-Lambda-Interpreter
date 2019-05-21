@@ -214,7 +214,7 @@ applyExprParser = try $ do
 main :: IO ()
 main = 
   -- input <- getContents
-  case runParser exprParser "" "1+2" of
+  case runParser exprParser "" "True == True" of
     Left error -> print error
     Right a -> print a
   -- parseTest lambdaExprParser "\\x::Int -> $x"

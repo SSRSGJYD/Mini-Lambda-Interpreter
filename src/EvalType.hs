@@ -1,54 +1,54 @@
 module EvalType where
 
 import AST
-import Context
+import ContextT
 import Control.Monad.State
 import qualified Data.Map as Map
 import Util
 
 
-isBool :: Expr -> ContextState Type
+isBool :: Expr -> ContextStateT Type
 isBool e = do
   et <- EvalType.eval e
   case et of
     TBool -> return TBool
     _ -> lift Nothing
 
-isBool2 :: Expr -> Expr -> ContextState Type
+isBool2 :: Expr -> Expr -> ContextStateT Type
 isBool2 e1 e2 = do
   et1 <- EvalType.eval e1
   case et1 of
     TBool -> isBool e2
     _ -> lift Nothing
 
-isInt :: Expr -> ContextState Type
+isInt :: Expr -> ContextStateT Type
 isInt e = do
   et <- EvalType.eval e
   case et of
     TInt -> return TInt
     _ -> lift Nothing
 
-isInt2 :: Expr -> Expr -> ContextState Type
+isInt2 :: Expr -> Expr -> ContextStateT Type
 isInt2 e1 e2 = do
   et1 <- EvalType.eval e1
   case et1 of
     TInt -> isInt e2
     _ -> lift Nothing
 
-isChar :: Expr -> ContextState Type
+isChar :: Expr -> ContextStateT Type
 isChar e = do
   et <- EvalType.eval e
   case et of
     TChar -> return TChar
     _ -> lift Nothing
 
-isSameType :: Expr -> Expr -> ContextState Bool
+isSameType :: Expr -> Expr -> ContextStateT Bool
 isSameType e1 e2 = do
   et1 <- EvalType.eval e1
   et2 <- EvalType.eval e2
   return $ et1 == et2
 
-isComparableType :: Expr -> ContextState Bool
+isComparableType :: Expr -> ContextStateT Bool
 isComparableType e = do
   et <- EvalType.eval e
   case et of
@@ -56,7 +56,7 @@ isComparableType e = do
     TChar -> return True
     _ -> return False
 
-eval :: Expr -> ContextState Type
+eval :: Expr -> ContextStateT Type
 eval (EBoolLit _) = return TBool
 eval (EIntLit _) = return TInt
 eval (ECharLit _) = return TChar
@@ -206,7 +206,7 @@ evalMultiArgsFuncType argTypes returnType = case argTypes of
   (t:ts) -> TArrow t $ evalMultiArgsFuncType ts returnType
 
 
-evalApplyMultiArgsFuncType :: [Expr] -> Type -> ContextState Type
+evalApplyMultiArgsFuncType :: [Expr] -> Type -> ContextStateT Type
 evalApplyMultiArgsFuncType argTypes funcType = 
   case argTypes of
     [] -> return funcType
@@ -221,25 +221,8 @@ evalApplyMultiArgsFuncType argTypes funcType =
 
 evalType :: Program -> Maybe Type
 evalType (Program adts body) = evalStateT (EvalType.eval body) $
-  Context { adtMap = initAdtMap adts, 
+  ContextT { adtMap = initAdtMap adts, 
             constructorMap = initConstructorMap adts,
             typeMap = Map.empty, 
             exprMap = Map.empty,
-            argList = [],
             logList = ["start EvalType Program"] }
-
-
--- evalType :: Program -> Maybe Type
--- evalType (Program adts body) = do
---   msa <- runStateT (eval body) $
---           Context { adtMap = initAdtMap adts, 
---                     constructorMap = initConstructorMap adts,
---                     typeMap = Map.empty, 
---                     exprMap = Map.empty,
---                     argList = [],
---                     logList = ["start EvalType Program"] }
---   case msa of 
---     ((t,v), s) -> if countArg s == 0
---               then return t
---               else Nothing
---     _ -> Nothing

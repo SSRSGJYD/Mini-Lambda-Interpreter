@@ -30,10 +30,11 @@ library
       AST
       EvalType
       EvalValue
-      EvalTypeValue
-      Context
+      ContextT
+      ContextV
       Util
       Pattern
+      MiniParser
   other-modules:
       Paths_fpproject
   hs-source-dirs:
