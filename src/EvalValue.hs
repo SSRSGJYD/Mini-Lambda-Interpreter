@@ -115,7 +115,7 @@ module EvalValue where
   eval (ELambda (varname, vartype) e) = do
     context <- get
     if emptyArg context
-    then lift Nothing
+    then mytrace "here" lift Nothing
     else
       let ec = firstArg context in do
         modify popArg
@@ -135,9 +135,9 @@ module EvalValue where
   -- letrec
   eval (ELetRec funcname (argname,argtype) (funcExpr, returntype) expr) = do
     context <- get
-    modify (insertExpr funcname (ELambda (argname, argtype) funcExpr, context))
+    modify (insertRecExpr funcname (ELambda (argname, argtype) funcExpr, context))
     t <- mytrace ("[ELetRec] EvalValue.eval: " ++ show expr) EvalValue.eval expr
-    modify (deleteExpr funcname)
+    modify (deleteRecExpr funcname)
     return t
   
   -- variable
@@ -145,16 +145,27 @@ module EvalValue where
     context <- get
     case lookupExpr context varname of 
         Just ec -> do
-            oldcontext <- get
             put $ snd ec
+            -- modify (insertExpr varname ec)
             ev <- mytrace ("[EVar] EvalValue.eval: " ++ show (fst ec)) EvalValue.eval (fst ec)
-            put oldcontext
+            -- modify (deleteExpr varname)
+            put context
             return ev
-        Nothing ->  -- ADT constructor without arguments
-            case lookupConstructor context varname of
-                Just (adtname, []) -> 
-                  mytrace ("[EVar] EvalValue.eval: " ++ show (EConstructor varname [])) EvalValue.eval (EConstructor varname [])
-                _ -> lift Nothing
+        Nothing -> 
+          case lookupRecExpr context varname of 
+            Just ec -> do
+                put $ snd ec
+                -- modify (insertExpr varname ec)
+                ev <- mytrace ("[EVar] EvalValue.eval: " ++ show (fst ec)) EvalValue.eval (fst ec)
+                -- modify (deleteExpr varname)
+                put context
+                return ev
+            Nothing ->  -- ADT constructor without arguments
+                case lookupConstructor context varname of
+                    Just (adtname, []) -> 
+                      mytrace ("[EVar] EvalValue.eval: " ++ show (EConstructor varname [])) EvalValue.eval (EConstructor varname [])
+                    _ -> lift Nothing
+    
   
   -- function apply
   eval (EApply e1 e2) = 
@@ -162,7 +173,7 @@ module EvalValue where
       ELambda e3@(varname, _) e4 -> do
         context <- get
         modify (pushArg (e2, context))
-        mytrace ("[EApply] EvalValue.eval: " ++ show (ELambda e3 e4)) EvalValue.eval $ ELambda e3 e4
+        mytrace ("[EApply] EvalValue.eval: " ++ show e1) EvalValue.eval e1
       EApply e3 e4 -> do
         context <- get
         modify (pushArg (e2, context))
@@ -170,22 +181,31 @@ module EvalValue where
       EVar funcname -> do
         context <- get
         case lookupExpr context funcname of
-          Just ec -> do
-            put $ snd ec
-            modify (pushArg (e2, context))
-            ev <- mytrace ("[EVar] EvalValue.eval: " ++ show (fst ec)) EvalValue.eval (fst ec)
-            put context
-            return ev
+          Just ec -> 
+            -- modify (deleteExpr funcname)
+            -- modify (insertExpr funcname (fst ec, pushArg (e2, context) (snd ec)))
+            -- put $ snd ec
             -- modify (pushArg (e2, context))
-            -- put $ snd sc
-            -- ev <- mytrace ("[EApply] EvalValue.eval: " ++ show (EVar funcname)) EvalValue.eval (EVar funcname)
+            -- put context
+            mytrace ("[EApply] EvalValue.eval: " ++ show (EVar funcname)) EvalValue.evalVar (EVar funcname) (e2, context)
             -- put context
             -- return ev
-          _ -> case lookupConstructor context funcname of
-                  Just (adtname, argList) -> do
-                    modify (pushArg (e2, context))
-                    mytrace ("[EApply] EvalValue.eval: " ++ show (EConstructor funcname [])) EvalValue.eval (EConstructor funcname [])
-                  _ -> lift Nothing
+          _ -> case lookupRecExpr context funcname of
+              Just ec -> do
+                put $ snd ec
+                modify (insertExpr funcname ec)
+                put context
+                modify (pushArg (e2, context))
+                ev <- mytrace ("[E] EvalValue.eval: " ++ show (fst ec)) EvalValue.eval (fst ec)
+                put $ snd ec
+                modify (deleteExpr funcname)
+                put context
+                return ev
+              _ -> case lookupConstructor context funcname of
+                      Just (adtname, argList) -> do
+                        modify (pushArg (e2, context))
+                        mytrace ("[EApply] EvalValue.eval: " ++ show (EConstructor funcname [])) EvalValue.eval (EConstructor funcname [])
+                      _ -> lift Nothing
       _ -> lift Nothing
   
   -- case
@@ -224,7 +244,35 @@ module EvalValue where
                 let e' = wrapValueToExpr ev
                 mytrace ("[EConstructor] EvalValue.eval" ++ show (EConstructor constructor (argList ++ [e']))) EvalValue.eval $ EConstructor constructor (argList ++ [e'])
                 
-  
+  -- variable with arg
+  evalVar :: Expr -> (Expr, ContextV) -> ContextStateV Value
+  evalVar (EVar varname) arg = do
+    context <- get
+    case lookupExpr context varname of 
+        Just ec -> do
+            -- put $ snd ec
+            modify (pushArg arg)
+            -- modify (insertExpr varname ec)
+            ev <- mytrace ("[EVar] EvalValue.evalVar: " ++ show (fst ec)) EvalValue.eval (fst ec)
+            -- modify (deleteExpr varname)
+            -- put context
+            return ev
+        Nothing -> 
+          case lookupRecExpr context varname of 
+            Just ec -> do
+                put $ snd ec
+                -- modify (insertExpr varname ec)
+                ev <- mytrace ("[EVar] EvalValue.eval: " ++ show (fst ec)) EvalValue.eval (fst ec)
+                -- modify (deleteExpr varname)
+                put context
+                return ev
+            Nothing ->  -- ADT constructor without arguments
+                case lookupConstructor context varname of
+                    Just (adtname, []) -> 
+                      mytrace ("[EVar] EvalValue.eval: " ++ show (EConstructor varname [])) EvalValue.eval (EConstructor varname [])
+                    _ -> lift Nothing
+
+
   evalExprList :: [Expr] -> ContextStateV [Value]
   evalExprList [] = return []
   evalExprList (e:es) = do
@@ -244,6 +292,7 @@ module EvalValue where
               constructorMap = initConstructorMap adts,
               typeMap = Map.empty, 
               exprMap = Map.empty,
+              exprRecMap = Map.empty,
               argList = [],
               logList = ["start EvalValue Program"] }
   

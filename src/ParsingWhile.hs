@@ -181,6 +181,6 @@ main :: IO ()
 main = do
   -- input <- getContents
   -- parseTest whileParser input
-  case runParser aExpr "" "1+2" of
+  case runParser stmt' "" "if 2>1 then a:=1 else b:=2" of
     Left error -> print error
     Right a -> print a

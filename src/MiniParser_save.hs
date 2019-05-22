@@ -59,121 +59,91 @@ programParser :: Parser Expr
 programParser = between sc eof exprParser
 
 exprParser :: Parser Expr
-exprParser = makeExprParser termParser operator
-        <|> try ifExprParser
-        <|> try letExprParser
+exprParser = try boolExprParser
+        -- <|> try integerExprParser
+        -- <|> try charExprParser
+        -- <|> try ifExprParser
+        -- <|> try letExprParser
         -- <|> try whereExprParser
-        <|> try letrecExprParser
-        <|> try lambdaExprParser
+        -- <|> try letrecExprParser
+        -- <|> try lambdaExprParser
         -- <|> try caseExprParser
         -- <|> try applyExprParser
-        <|> try variableExprParser
-        <|> try (parensParser exprParser)
+        -- <|> try variableExprParser
+        -- <|> try (parensParser exprParser)
 
+boolExprParser :: Parser Expr
+boolExprParser = try $ makeExprParser boolTermParser boolOperator
+
+integerExprParser :: Parser Expr
+integerExprParser = try $ makeExprParser integerTermParser integerOperator
+
+charExprParser :: Parser Expr
+charExprParser = try charTermParser
+
+-- parsers of terms
 termParser :: Parser Expr
-termParser = try (EBoolLit True <$ rword "True")
-        <|> try (EBoolLit False <$ rword "False")
-        <|> try (EIntLit <$> integerParser)
-        <|> try (ECharLit <$> charParser)
-        <|> try (EVar <$> identifierParser)
-        <|> try (parensParser exprParser)
+termParser = try boolTermParser
+        <|> try integerTermParser
+        <|> try charTermParser
 
-operator :: [[Operator Parser Expr]]     
-operator = 
-  [
-    [ Prefix (ENot <$ rword "not") ],
+boolTermParser :: Parser Expr
+boolTermParser =  try (parensParser boolExprParser)
+        -- <|> EVar <$> identifierParser
+        <|> try (EBoolLit True <$ rword "True")
+        <|> try (EBoolLit False <$ rword "False")
+        <|> try comparisonExprParser
+
+integerTermParser :: Parser Expr
+integerTermParser = try (parensParser integerExprParser)
+        -- <|> EVar <$> identifierParser
+        <|> try (EIntLit <$> integerParser)
+
+charTermParser :: Parser Expr
+charTermParser = try (parensParser charExprParser)
+        -- <|> EVar <$> identifierParser
+        <|> try (ECharLit <$> charParser)
+
+-- parsers of operators
+boolOperator :: [[Operator Parser Expr]]
+boolOperator =
+  [ [ Prefix (ENot <$ rword "not") ],
 
     [ InfixL (EAnd <$ rword "and"),
-      InfixL (EOr <$ rword "or") ],
+      InfixL (EOr <$ rword "or") ]
+  ]
 
+integerOperator :: [[Operator Parser Expr]]
+integerOperator =
+  [
     [ InfixL (EMul <$ symbol "*"),
       InfixL (EDiv <$ symbol "/"),
       InfixL (EMod <$ symbol "%") ],
 
     [ InfixL (EAdd <$ symbol "+"),
-      InfixL (ESub <$ symbol "-") ],
-
-    [ InfixL (EGt <$ symbol ">"),
-      InfixL (ELt <$ symbol "<"),
-      InfixL (EGe <$ symbol ">="),
-      InfixL (ELe <$ symbol "<=") ],
-
-    [ InfixL (EEq <$ symbol "=="), 
-      InfixL (ENeq <$ symbol "/=") ]
+      InfixL (ESub <$ symbol "-") ]
   ]
 
--- boolExprParser :: Parser Expr
--- boolExprParser = try $ makeExprParser boolTermParser boolOperator
-
--- integerExprParser :: Parser Expr
--- integerExprParser = try $ makeExprParser integerTermParser integerOperator
-
--- charExprParser :: Parser Expr
--- charExprParser = try charTermParser
-
--- parsers of terms
--- termParser :: Parser Expr
--- termParser = try boolTermParser
---         <|> try integerTermParser
---         <|> try charTermParser
-
--- boolTermParser :: Parser Expr
--- boolTermParser =  try (parensParser boolExprParser)
---         -- <|> EVar <$> identifierParser
---         <|> try (EBoolLit True <$ rword "True")
---         <|> try (EBoolLit False <$ rword "False")
---         <|> try comparisonExprParser
-
--- integerTermParser :: Parser Expr
--- integerTermParser = try (parensParser integerExprParser)
---         -- <|> EVar <$> identifierParser
---         <|> try (EIntLit <$> integerParser)
-
--- charTermParser :: Parser Expr
--- charTermParser = try (parensParser charExprParser)
---         -- <|> EVar <$> identifierParser
---         <|> try (ECharLit <$> charParser)
-
--- -- parsers of operators
--- boolOperator :: [[Operator Parser Expr]]
--- boolOperator =
---   [ [ Prefix (ENot <$ rword "not") ],
-
---     [ InfixL (EAnd <$ rword "and"),
---       InfixL (EOr <$ rword "or") ]
---   ]
-
--- integerOperator :: [[Operator Parser Expr]]
--- integerOperator =
---   [
---     [ InfixL (EMul <$ symbol "*"),
---       InfixL (EDiv <$ symbol "/"),
---       InfixL (EMod <$ symbol "%") ],
-
---     [ InfixL (EAdd <$ symbol "+"),
---       InfixL (ESub <$ symbol "-") ]
---   ]
-
 -- parser of comparision
--- comparisonExprParser :: Parser Expr
--- comparisonExprParser = try $ makeExprParser termParser comparisionOperator
+comparisonExprParser :: Parser Expr
+comparisonExprParser = try $ makeExprParser termParser comparisionOperator
 
--- comparisionOperator :: [[Operator Parser Expr]]
--- comparisionOperator  = 
---     [
---         [ InfixL (EGt <$ symbol ">"),
---           InfixL (ELt <$ symbol "<"),
---           InfixL (EGe <$ symbol ">="),
---           InfixL (ELe <$ symbol "<=") ],
+comparisionOperator :: [[Operator Parser Expr]]
+comparisionOperator  = 
+    [
+        [ InfixL (EGt <$ symbol ">"),
+          InfixL (ELt <$ symbol "<"),
+          InfixL (EGe <$ symbol ">="),
+          InfixL (ELe <$ symbol "<=") ],
 
---         [ InfixL (EEq <$ symbol "=="), 
---           InfixL (ENeq <$ symbol "/=") ]
---     ]
+        [ InfixL (EEq <$ symbol "=="), 
+          InfixL (ENeq <$ symbol "/=") ]
+    ]
 
 ifExprParser :: Parser Expr
 ifExprParser = try $ do
     rword "if"
-    e1 <- exprParser
+    e1 <- boolExprParser
     rword "then"
     e2 <- exprParser
     rword "else"
@@ -244,7 +214,7 @@ applyExprParser = try $ do
 main :: IO ()
 main = 
   -- input <- getContents
-  case runParser exprParser "" "(\\x->(x+1)) (3+2)" of
+  case runParser exprParser "" "True == True" of
     Left error -> print error
     Right a -> print a
   -- parseTest lambdaExprParser "\\x::Int -> $x"
