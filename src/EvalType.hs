@@ -5,6 +5,7 @@ import ContextT
 import Control.Monad.State
 import qualified Data.Map as Map
 import Util
+import Pattern
 
 
 isBool :: Expr -> ContextStateT Type
@@ -46,7 +47,12 @@ isSameType :: Expr -> Expr -> ContextStateT Bool
 isSameType e1 e2 = do
   et1 <- EvalType.eval e1
   et2 <- EvalType.eval e2
-  return $ et1 == et2
+  return $ eqType et1 et2
+
+eqType :: Type -> Type -> Bool
+eqType (TData adtname1) (TConstructor adtname2 _ _) = adtname1 == adtname2
+eqType (TConstructor adtname2 _ _) (TData adtname1) = adtname1 == adtname2
+eqType t1 t2 = t1 == t2
 
 isComparableType :: Expr -> ContextStateT Bool
 isComparableType e = do
@@ -152,7 +158,7 @@ eval ep@(ELetRec funcname (argname,argtype) (funcExpr, returntype) expr) = do
   modify (insertExpr funcname (ELambda (argname, argtype) funcExpr))
   modify (insertType funcname (TArrow argtype returntype))
   et <- mytrace ("[ELetRec] EvalType.eval: " ++ show (ELambda (argname, argtype) funcExpr)) EvalType.eval $ ELambda (argname, argtype) funcExpr
-  if et == TArrow argtype returntype
+  if eqType et $ TArrow argtype returntype
   then do
     t <- mytrace ("[ELetRec] EvalType.eval: " ++ show expr) EvalType.eval expr
     modify (deleteExpr funcname)
@@ -163,6 +169,7 @@ eval ep@(ELetRec funcname (argname,argtype) (funcExpr, returntype) expr) = do
     modify (deleteType funcname)
     lift Nothing
 
+
 eval (EVar varname) = do
   context <- get
   case lookupType context varname of 
@@ -170,31 +177,37 @@ eval (EVar varname) = do
     Nothing -> 
       case lookupExpr context varname of 
         Just e -> do
-            modify (deleteExpr varname)
+            -- modify (deleteExpr varname)
             et <- mytrace ("[EVar] EvalType.eval: " ++ show e) EvalType.eval e
-            modify (insertExpr varname e)
+            -- modify (insertExpr varname e)
             return et
-        Nothing -> case lookupConstructor context varname of
-                      Just (adtname, argList) -> return $ evalMultiArgsFuncType argList (TData adtname)
-                      _ -> lift Nothing
+        Nothing -> 
+          case lookupConstructor context varname of
+            Just (adtname, argList) -> return $ evalMultiArgsFuncType argList (TConstructor adtname varname argList)
+            _ -> lift Nothing
                 
 eval (EApply e1 e2) = do
   et1 <- mytrace ("[EApply] EvalType.eval: " ++ show e1) EvalType.eval e1
   et2 <- mytrace ("[EApply] EvalType.eval: " ++ show e2) EvalType.eval e2
   case et1 of 
-    TArrow t1 t2 -> if et2 == t1 then return t2 else lift Nothing
+    TArrow t1 t2 -> if eqType et2 t1 then return t2 else lift Nothing
     _ -> lift Nothing
 
-eval (ECase e list) = 
+eval (ECase e list) = do
+  et <- EvalType.eval e
   case list of
-    (x : xs) -> mytrace ("[ECase] EvalType.eval: " ++ show (snd x)) EvalType.eval $ snd x
+    (p : ps) -> do 
+      ebool <- matchPatternT (fst p) et
+      if ebool
+      then do
+        modify (bindPatternT (fst p) et)
+        result <- mytrace ("[ECase] EvalType.eval: " ++ show (snd p)) EvalType.eval (snd p)
+        modify (unbindPatternT (fst p))
+        return result
+      else
+        mytrace ("[ECase] EvalType.eval: " ++ show (ECase e ps)) EvalType.eval (ECase e ps)
     _ -> lift Nothing
 
-eval (EConstructor constructor argList) = do
-  context <- get
-  case lookupConstructor context constructor of
-    Just (adtname, argTypes) -> evalApplyMultiArgsFuncType argList $ evalMultiArgsFuncType argTypes (TData adtname)
-    _ -> lift Nothing
 
 
 eval _ = lift Nothing
@@ -213,7 +226,7 @@ evalApplyMultiArgsFuncType argTypes funcType =
     (arg : args) -> case funcType of
         TArrow t1 t2 -> do
           et <- mytrace ("[EConstructor] EvalType.eval: " ++ show arg) EvalType.eval arg
-          if et == t1
+          if eqType et t1
           then evalApplyMultiArgsFuncType args t2
           else lift Nothing
         _ -> lift Nothing
