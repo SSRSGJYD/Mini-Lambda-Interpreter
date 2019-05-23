@@ -1,6 +1,7 @@
 module Pattern where
 
 import AST
+import Control.Monad.State
 import ContextV
 import ContextT
 import Util
@@ -78,7 +79,7 @@ matchPatternsT (p:ps') (ev:evs') = do
   else return False
     
 matchPatternT :: Pattern -> Type -> ContextStateT Bool
-matchPatternT p ev =
+matchPatternT p ev = 
   case p of
     PBoolLit x -> return $ ev == TBool
     PIntLit x -> return $ ev == TInt
@@ -89,6 +90,11 @@ matchPatternT p ev =
         if funcname == constructor
         then matchPatternsT patterns typeList
         else return False
+      TData adtname -> do
+        context <- get
+        case ContextT.lookupConstructor context funcname of
+          Just (adtname', _) -> return $ adtname == adtname'
+          _ -> return False
       _ -> return False
     _ -> return False 
 
@@ -108,6 +114,10 @@ bindPatternT p ev context =
     PData funcname [] -> context
     PData constructor patterns -> case ev of
       TConstructor adtname constructor argList -> bindPatternsT patterns argList context
+      TData adtname -> 
+        case ContextT.lookupConstructor context constructor of
+          Just (adtname, typeList) -> bindPatternsT patterns typeList context
+          _ -> context
       _ -> context
     _ -> context
 

@@ -50,9 +50,7 @@ isSameType e1 e2 = do
   return $ eqType et1 et2
 
 eqType :: Type -> Type -> Bool
-eqType (TData adtname1) (TConstructor adtname2 _ _) = adtname1 == adtname2
-eqType (TConstructor adtname2 _ _) (TData adtname1) = adtname1 == adtname2
-eqType t1 t2 = t1 == t2
+eqType t1 t2 = formatType t1 == formatType t2
 
 isComparableType :: Expr -> ContextStateT Bool
 isComparableType e = do
@@ -142,10 +140,10 @@ eval (EIf e1 e2 e3) = do
 
 eval (ELambda (varname, t1) e) = do
   modify (insertType varname t1)
-  modify (insertExpr varname e)
+  -- modify (insertExpr varname e)
   t2 <- EvalType.eval e
   modify (deleteType varname)
-  modify (deleteExpr varname)
+  -- modify (deleteExpr varname)
   return $ TArrow t1 t2
 
 eval (ELet (varname, e1) e2) = do
@@ -160,6 +158,8 @@ eval ep@(ELetRec funcname (argname,argtype) (funcExpr, returntype) expr) = do
   et <- mytrace ("[ELetRec] EvalType.eval: " ++ show (ELambda (argname, argtype) funcExpr)) EvalType.eval $ ELambda (argname, argtype) funcExpr
   if eqType et $ TArrow argtype returntype
   then do
+    modify (deleteType funcname)
+    modify (insertType funcname et)
     t <- mytrace ("[ELetRec] EvalType.eval: " ++ show expr) EvalType.eval expr
     modify (deleteExpr funcname)
     modify (deleteType funcname)
@@ -233,9 +233,13 @@ evalApplyMultiArgsFuncType argTypes funcType =
 
 
 evalType :: Program -> Maybe Type
-evalType (Program adts body) = evalStateT (EvalType.eval body) $
-  ContextT { adtMap = initAdtMap adts, 
-            constructorMap = initConstructorMap adts,
-            typeMap = Map.empty, 
-            exprMap = Map.empty,
-            logList = ["start EvalType Program"] }
+evalType (Program adts body) = 
+  let mt = evalStateT (EvalType.eval body) $
+            ContextT { adtMap = initAdtMap adts, 
+                      constructorMap = initConstructorMap adts,
+                      typeMap = Map.empty, 
+                      exprMap = Map.empty,
+                      logList = ["start EvalType Program"] }
+  in case mt of
+    Just t -> Just $ formatType t
+    _ -> Nothing
