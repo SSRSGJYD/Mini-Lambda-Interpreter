@@ -4,12 +4,12 @@ import AST
 import Debug.Trace
 
 mytrace :: String -> a -> a
-mytrace = trace -- for debugging
--- mytrace str x = x
+-- mytrace = trace -- for debugging
+mytrace str x = x
 
 mytrace2 :: String -> a -> a
-mytrace2 = trace -- for debugging
--- mytrace2 str x = x
+-- mytrace2 = trace -- for debugging
+mytrace2 str x = x
 
 
 wrapValueToExpr :: Value -> Expr

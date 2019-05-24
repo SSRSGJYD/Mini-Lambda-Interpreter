@@ -32,9 +32,11 @@ library
       EvalValue
       ContextT
       ContextV
+      ReplContext
       Util
       Pattern
       MiniParser
+      ReplParser
       MiniRepl
   other-modules:
       Paths_fpproject

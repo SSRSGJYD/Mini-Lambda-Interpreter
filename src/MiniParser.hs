@@ -51,13 +51,6 @@ typesParser = sepBy typeParser (symbol ",")
 arrowOperator :: [[Operator Parser Type]]
 arrowOperator = [[ InfixL (TArrow <$ symbol "->")]]
 
--- arrowTypeParser :: Parser Type
--- arrowTypeParser = try $ do
---     t1 <- typeParser
---     symbol "->"
---     t2 <- typeParser
---     return $ TArrow t1 t2
-
 integerParser :: Parser Int
 integerParser = (lexeme . try) L.decimal
 
