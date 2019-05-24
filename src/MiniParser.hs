@@ -36,9 +36,27 @@ parensParser :: Parser a -> Parser a
 parensParser = between (symbol "(") (symbol ")")
 
 typeParser :: Parser Type
-typeParser = try (TBool <$rword "Bool")
+typeParser = makeExprParser atomTypeParser arrowOperator
+  
+atomTypeParser :: Parser Type
+atomTypeParser = try (TBool <$rword "Bool")
         <|> try (TInt <$rword "Int")
         <|> try (TChar <$rword "Char")
+        <|> try (TData <$> identifierParser)
+        <|> try (parensParser typeParser)
+
+typesParser :: Parser [Type]
+typesParser = sepBy typeParser (symbol ",")
+
+arrowOperator :: [[Operator Parser Type]]
+arrowOperator = [[ InfixL (TArrow <$ symbol "->")]]
+
+-- arrowTypeParser :: Parser Type
+-- arrowTypeParser = try $ do
+--     t1 <- typeParser
+--     symbol "->"
+--     t2 <- typeParser
+--     return $ TArrow t1 t2
 
 integerParser :: Parser Int
 integerParser = (lexeme . try) L.decimal
@@ -55,16 +73,13 @@ identifierParser =  (lexeme . try) (p >>= check)
               else return x
 
 -- root parser of all expressions
-programParser :: Parser Expr
-programParser = between sc eof exprParser
-
 exprParser :: Parser Expr
 exprParser = makeExprParser termParser operator
         <|> try ifExprParser
         <|> try letExprParser
         <|> try letrecExprParser
         <|> try lambdaExprParser
-        -- <|> try caseExprParser
+        <|> try caseExprParser
         <|> try applyExprParser
         <|> try variableExprParser
         <|> try (parensParser exprParser)
@@ -163,15 +178,81 @@ applyExprParser = try $ do
     e2 <- exprParser
     return (EApply e1 e2)
 
+-- deal with case expr and patterns
+caseExprParser :: Parser Expr
+caseExprParser = try $ do
+    rword "case"
+    e <- exprParser
+    rword "of"
+    patternAssigns <- patternAssignsParser
+    return $ ECase e patternAssigns
+
+-- patternAssign ; patternAssign ; ... ; patternAssign
+patternAssignsParser :: Parser [(Pattern, Expr)]
+patternAssignsParser = sepBy1 patternAssignParser (symbol ";")
+
+-- pattern --> expr
+patternAssignParser :: Parser (Pattern, Expr)
+patternAssignParser = try $ do
+    apattern <- patternParser
+    symbol "-->"
+    expr <- exprParser
+    return (apattern, expr)
+
+-- pattern, pattern, ... , pattern
+patternsParser :: Parser [Pattern]
+patternsParser = sepBy1 patternParser (symbol ",")
+
+
+patternParser :: Parser Pattern
+patternParser = try (PBoolLit True <$ rword "True")
+        <|> try (PBoolLit False <$ rword "False")
+        <|> try (PIntLit <$> integerParser)
+        <|> try (PCharLit <$> charParser)
+        <|> try (PVar <$> identifierParser)
+        <|> try adtPatternParser
+   
+-- adt
+-- definition: Data adtname := Constructor1 (t1,t2,..,tm) | Constructor2 (t1,t2,..,tn)
+adtDefineParser :: Parser ADT
+adtDefineParser = try $ do
+    rword "Data"
+    adtname <- identifierParser
+    symbol ":="
+    constructors <- constructorsParser
+    return $ ADT adtname constructors
+
+constructorsParser :: Parser [(String, [Type])]
+constructorsParser = sepBy1 constructorParser (symbol "|")
+
+constructorParser :: Parser (String, [Type])
+constructorParser = try $ do
+    funcname <- identifierParser
+    symbol "("
+    typeList <- typesParser
+    symbol ")"
+    return (funcname, typeList)
+
+adtPatternParser :: Parser Pattern
+adtPatternParser = try $ do
+  symbol "["
+  constructor <- identifierParser
+  symbol "]"
+  patterns <- patternsParser
+  return $ PData constructor patterns
+
 
 main :: IO ()
 main = 
   -- input <- getContents
-  case runParser exprParser "" "letrec Int def inc(x::Int){x+1} in | inc $ 3" of
+  case runParser adtDefineParser "" "Data List := Cons (Int->Int, List->(Int->Int)) | Nil ()" of
     Left error -> print error
     Right a -> print a
-  -- parseTest lambdaExprParser "\\x::Int -> $x"
-  -- parseTest letrecExprParser "letrec int def inc(x::int){x+1} in inc 3"
 
+
+  -- "\\x::Int -> $x"
+  -- "letrec Int def inc(x::Int){x+1} in | inc $ 3"
+  -- "case x+1>2 of True --> False; 3 --> 1; \'A\'-->\'B\'"
+  -- "Data List := Cons (Int->Int, List->(Int->Int)) | Nil ()"
 
 

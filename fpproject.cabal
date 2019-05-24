@@ -35,6 +35,7 @@ library
       Util
       Pattern
       MiniParser
+      MiniRepl
   other-modules:
       Paths_fpproject
   hs-source-dirs:
