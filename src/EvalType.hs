@@ -1,4 +1,4 @@
-module EvalType where
+module EvalType (evalType) where
 
 import AST
 import ContextT

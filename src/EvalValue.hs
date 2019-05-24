@@ -1,4 +1,4 @@
-module EvalValue where
+module EvalValue (evalValue, evalProgram) where
 
   import AST
   import ContextV
@@ -6,7 +6,6 @@ module EvalValue where
   import qualified Data.Map as Map
   import Util
   import Pattern
-  import EvalType
   
   getBool :: Expr -> ContextStateV Bool
   getBool e = do

@@ -235,12 +235,12 @@ adtPatternParser = try $ do
   return $ PData constructor patterns
 
 
-main :: IO ()
-main = 
-  -- input <- getContents
-  case runParser adtDefineParser "" "Data List := Cons (Int->Int, List->(Int->Int)) | Nil ()" of
-    Left error -> print error
-    Right a -> print a
+-- main :: IO ()
+-- main = 
+--   -- input <- getContents
+--   case runParser adtDefineParser "" "Data List := Cons (Int->Int, List->(Int->Int)) | Nil ()" of
+--     Left error -> print error
+--     Right a -> print a
 
 
   -- "\\x::Int -> $x"

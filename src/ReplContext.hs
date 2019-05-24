@@ -7,7 +7,7 @@ import Util
 
 data ReplContext = ReplContext {
     adtMap :: Map.Map String ADT, -- adtname --> ADT definition
-    bindMap :: Map.Map String Expr -- 表达式绑定
+    bindList :: [(String, Expr)] -- 表达式绑定
 } deriving (Show, Eq)
 
 -- adt definitions
@@ -18,23 +18,30 @@ lookupADT :: ReplContext -> String -> Maybe ADT
 lookupADT context varname = Map.lookup varname (adtMap context)
 
 insertADT :: String -> ADT -> ReplContext -> ReplContext
-insertADT adtname adt context@(ReplContext adtMap bindMap) = 
+insertADT adtname adt context@(ReplContext adtMap bindList) = 
     if containADT context adtname
-    then ReplContext (Map.update (\x -> Just adt) adtname adtMap) bindMap
-    else ReplContext (Map.insert adtname adt adtMap) bindMap
+    then ReplContext (Map.update (\x -> Just adt) adtname adtMap) bindList
+    else ReplContext (Map.insert adtname adt adtMap) bindList
 
+showADTs :: [ADT] -> IO ()
+showADTs [] = do
+    putStrLn "End of adt definitions."
+showADTs (x:xs) = do
+    print x
+    showADTs xs
+    
 -- binds
-containBind :: ReplContext -> String -> Bool
-containBind context varname = Map.member varname (bindMap context)
-
-lookupBind :: ReplContext -> String -> Maybe Expr
-lookupBind context varname = Map.lookup varname (bindMap context)
-
 insertBind :: String -> Expr -> ReplContext -> ReplContext
-insertBind varname expr context@(ReplContext adtMap bindMap) = 
-    if containBind context varname
-    then ReplContext adtMap (Map.update (\x -> Just expr) varname bindMap)
-    else ReplContext adtMap (Map.insert varname expr bindMap)
+insertBind varname expr context@(ReplContext adtMap bindList) = ReplContext adtMap ((varname, expr):bindList)
+
+
+showBinds :: [(String, Expr)] -> IO ()
+showBinds [] = do
+    putStrLn "End of variable bindings."
+showBinds (x:xs) = do
+    putStrLn $ show (fst x) ++ " := " ++ show (snd x)
+    showBinds xs
+
 
 -- utils
 extendBinds :: [(String, Expr)] -> Expr -> Expr
