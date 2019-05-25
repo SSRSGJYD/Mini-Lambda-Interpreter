@@ -180,13 +180,10 @@ module EvalValue (evalValue, evalProgram) where
       EVar funcname -> do
         context <- get
         case lookupExpr context funcname of
-          Just ec -> 
-            -- modify (deleteExpr funcname)
-            -- modify (insertExpr funcname (fst ec, pushArg (e2, context) (snd ec)))
-            -- put $ snd ec
-            -- modify (pushArg (e2, context))
-            -- put context
-            mytrace ("[EApply] EvalValue.eval: " ++ show (EVar funcname)) EvalValue.evalVar (EVar funcname) (e2, context)
+          Just ec -> do
+            let args = getAllArgs context
+            modify popAll
+            mytrace ("[EApply] EvalValue.eval: " ++ show (EVar funcname)) EvalValue.evalVar (EVar funcname) ((e2, context):args)
             -- put context
             -- return ev
           _ -> case lookupRecExpr context funcname of
@@ -244,18 +241,24 @@ module EvalValue (evalValue, evalProgram) where
                 mytrace ("[EConstructor] EvalValue.eval" ++ show (EConstructor constructor (argList ++ [e']))) EvalValue.eval $ EConstructor constructor (argList ++ [e'])
                 
   -- variable with arg
-  evalVar :: Expr -> (Expr, ContextV) -> ContextStateV Value
-  evalVar (EVar varname) arg = do
+  evalVar :: Expr -> [(Expr, ContextV)] -> ContextStateV Value
+  evalVar (EVar varname) args = do
     context <- get
     case lookupExpr context varname of 
         Just ec -> do
-            -- put $ snd ec
-            modify (pushArg arg)
-            -- modify (insertExpr varname ec)
-            ev <- mytrace ("[EVar] EvalValue.evalVar: " ++ show (fst ec)) EvalValue.eval (fst ec)
-            -- modify (deleteExpr varname)
-            -- put context
-            return ev
+            case fst ec of
+              EVar varname2 -> do
+                put $ snd ec
+                ev <- mytrace ("[EVar] EvalValue.evalVar: " ++ show (EVar varname2)) EvalValue.evalVar (EVar varname2) args
+                put context
+                return ev
+              _ -> do
+                put $ snd ec
+                -- modify (pushArg arg)
+                modify (pushArgs args)
+                ev <- mytrace ("[EVar] EvalValue.evalVar: " ++ show (fst ec)) EvalValue.eval (fst ec)
+                put context
+                return ev
         Nothing -> 
           case lookupRecExpr context varname of 
             Just ec -> do

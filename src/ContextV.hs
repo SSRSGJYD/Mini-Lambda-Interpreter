@@ -121,6 +121,9 @@ deleteRecExpr varname context@(ContextV adtMap constructorMap typeMap exprMap ex
 pushArg :: (Expr, ContextV) -> ContextV -> ContextV
 pushArg ec (ContextV adtMap constructorMap typeMap exprMap exprRecMap argList log) = mytrace2 ("### pushing arg:" ++ (show $ fst ec)) ContextV adtMap constructorMap typeMap exprMap exprRecMap (ec:argList) log
 
+pushArgs :: [(Expr, ContextV)] -> ContextV -> ContextV
+pushArgs ecs (ContextV adtMap constructorMap typeMap exprMap exprRecMap argList log) = mytrace2 ("### pushing args") ContextV adtMap constructorMap typeMap exprMap exprRecMap ecs log
+
 emptyArg :: ContextV -> Bool
 emptyArg context = null $ argList context
 
@@ -133,6 +136,11 @@ popArg (ContextV adtMap constructorMap typeMap exprMap exprRecMap argList log) =
 countArg :: ContextV -> Int
 countArg context = length $ argList context
 
+getAllArgs :: ContextV -> [(Expr, ContextV)]
+getAllArgs context = mytrace2 ("### get all args:") $ argList context
+
+popAll :: ContextV -> ContextV
+popAll (ContextV adtMap constructorMap typeMap exprMap exprRecMap argList log) = mytrace2 ("### poping all args:") ContextV adtMap constructorMap typeMap exprMap exprRecMap [] log
 
 -- log operations
 prependLog :: String -> ContextV -> ContextV
