@@ -1,6 +1,12 @@
-function _tmp1(y){
-function _tmp0(x){
-return (y) + (x);}
-return _tmp0;}
+function fact(x){
+function _tmp0(){
+if((x) === (0)){
+    return 1
+} else{
+    return (x) * ((fact)((x) - (1)))
+}
 
-console.log(((_tmp1)(1))(2))
+}
+return _tmp0()}
+
+console.log((fact)(5))

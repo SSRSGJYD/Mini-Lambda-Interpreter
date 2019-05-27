@@ -137,7 +137,11 @@ gen (ELet (varname, e1) e2) = do
             return ("_tmp" ++ show funcId ++ "(" ++ fst c1 ++ ")", decl ++ snd c1)
 
 
--- gen (ELetRec funcname (argname,argtype) (funcExpr, returntype) expr) = do
+gen (ELetRec funcname (argname,argtype) (funcExpr, returntype) expr) = do
+    c1 <- gen funcExpr
+    c2 <- gen expr
+    return (fst c2, "function " ++ funcname ++ "(" ++ argname ++ "){\n" ++ snd c1 ++ 
+                        "return " ++ fst c1 ++ "}\n" ++ snd c2)
 
 gen (EApply e1 e2) = do
     c1 <- gen e1
@@ -159,5 +163,15 @@ run expr path = do
     hPutStr handle $ genCode expr
     hClose handle
 
+expr_fact = EIf (EEq (EVar "x") (EIntLit 0))
+    (EIntLit 1)
+    (EMul 
+        (EVar "x") 
+        (EApply 
+        (EVar "fact") 
+        (ESub (EVar "x") (EIntLit 1))
+        )
+        )
+
 main :: IO()
-main = run (EApply (EApply (ELambda ("y", TInt) (ELambda ("x", TInt) (EAdd (EVar "y") (EVar "x")))) (EIntLit 1)) (EIntLit 2)) "output.js"
+main = run (ELetRec "fact" ("x", TInt) (expr_fact, TInt) (EApply (EVar "fact") (EIntLit 5))) "output.js"
