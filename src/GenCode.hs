@@ -5,114 +5,136 @@ import Control.Monad.State
 import Data.Char
 import System.IO
 
-data Context = Context {  
-                    funcId :: Int, 
-                    funcDecl :: [String]
-                    }
+newtype Context = Context { funcId :: Int }
 
 type ContextState a = State Context a
 
-insertDecl :: String -> Context ->  Context
-insertDecl decl c@(Context funcId funcDecl) = 
-    Context (funcId+1) (decl : funcDecl)
+insertDecl :: Context -> Context
+insertDecl (Context funcId) = Context (funcId+1)
 
-gen :: Expr -> ContextState String
--- gen = undefined
-gen (EBoolLit x) = return $ map toLower (show x)
-gen (EIntLit x) = return $ show x
-gen (ECharLit x) = return $ show x
+gen :: Expr -> ContextState (String, String)
+gen (EBoolLit x) = return (map toLower (show x), "")
+gen (EIntLit x) = return (show x, "")
+gen (ECharLit x) = return (show x, "")
 
 gen (ENot e) = do
     c <- gen e
-    return $ "!(" ++ c ++ ")"
+    return ("!(" ++ fst c ++ ")", snd c)
 
 gen (EAnd e1 e2) = do
     c1 <- gen e1
     c2 <- gen e2
-    return $ "(" ++ c1 ++ ") && (" ++ c2 ++ ")"
+    return ("(" ++ fst c1 ++ ") && (" ++ fst c2 ++ ")", snd c1 ++ snd c2)
 
 gen (EOr e1 e2) = do
     c1 <- gen e1
     c2 <- gen e2
-    return $ "(" ++ c1 ++ ") || (" ++ c2 ++ ")"
+    return ("(" ++ fst c1 ++ ") || (" ++ fst c2 ++ ")", snd c1 ++ snd c2)
 
 gen (EAdd e1 e2) =  do
-    c1 <- gen e1
+    c1 <- gen e1    
     c2 <- gen e2
-    return $ "(" ++ c1 ++ ") + (" ++ c2 ++ ")"
+    return ("(" ++ fst c1 ++ ") + (" ++ fst c2 ++ ")", snd c1 ++ snd c2)
 gen (ESub e1 e2) =  do
     c1 <- gen e1
     c2 <- gen e2
-    return $ "(" ++ c1 ++ ") - (" ++ c2 ++ ")"
+    return ("(" ++ fst c1 ++ ") - (" ++ fst c2 ++ ")", snd c1 ++ snd c2)
 gen (EMul e1 e2) =  do
     c1 <- gen e1
     c2 <- gen e2
-    return $ "(" ++ c1 ++ ") * (" ++ c2 ++ ")"
+    return ("(" ++ fst c1 ++ ") * (" ++ fst c2 ++ ")", snd c1 ++ snd c2)
 gen (EDiv e1 e2) =  do
     c1 <- gen e1
     c2 <- gen e2
-    return $ "parseInt((" ++ c1 ++ ") / (" ++ c2 ++ "))"
+    return ("parseInt((" ++ fst c1 ++ ") / (" ++ fst c2 ++ "))", snd c1 ++ snd c2)
 gen (EMod e1 e2) =  do
     c1 <- gen e1
     c2 <- gen e2
-    return $ "(" ++ c1 ++ ") % (" ++ c2 ++ ")"
+    return ("(" ++ fst c1 ++ ") % (" ++ fst c2 ++ ")", snd c1 ++ snd c2)
 
 gen (EEq e1 e2) = do
     c1 <- gen e1
     c2 <- gen e2
-    return $ "(" ++ c1 ++ ") === (" ++ c2 ++ ")"
+    return ("(" ++ fst c1 ++ ") === (" ++ fst c2 ++ ")", snd c1 ++ snd c2)
 gen (ENeq e1 e2) = do
     c1 <- gen e1
     c2 <- gen e2
-    return $ "(" ++ c1 ++ ") !== (" ++ c2 ++ ")"
+    return ("(" ++ fst c1 ++ ") !== (" ++ fst c2 ++ ")", snd c1 ++ snd c2)
 
 gen (ELt e1 e2) = do
     c1 <- gen e1
     c2 <- gen e2
-    return $ "(" ++ c1 ++ ") < (" ++ c2 ++ ")"
+    return ("(" ++ fst c1 ++ ") < (" ++ fst c2 ++ ")", snd c1 ++ snd c2)
 gen (EGt e1 e2) = do
     c1 <- gen e1
     c2 <- gen e2
-    return $ "(" ++ c1 ++ ") > (" ++ c2 ++ ")"
+    return ("(" ++ fst c1 ++ ") > (" ++ fst c2 ++ ")", snd c1 ++ snd c2)
 gen (ELe e1 e2) = do
     c1 <- gen e1
     c2 <- gen e2
-    return $ "(" ++ c1 ++ ") <= (" ++ c2 ++ ")"
+    return ("(" ++ fst c1 ++ ") <= (" ++ fst c2 ++ ")", snd c1 ++ snd c2)
 gen (EGe e1 e2) = do
     c1 <- gen e1
     c2 <- gen e2
-    return $ "(" ++ c1 ++ ") >= (" ++ c2 ++ ")"
+    return ("(" ++ fst c1 ++ ") >= (" ++ fst c2 ++ ")", snd c1 ++ snd c2)
 
+-- function _tmp(){
+--     if-decl; 
+--     if()
+--     then {
+--         then-decl; 
+--         return ..;
+--     } else{
+--         else-decl; 
+--         return ..;
+--          }
+--     }
 gen (EIf e e1 e2) = do
     c <- gen e
     c1 <- gen e1
     c2 <- gen e2
-    return $ "if(" ++ c ++ "){\n    " 
-                ++ c1
-            ++ "\n} else{\n    "
-                ++ c2
-            ++ "\n}"
+    context <- get
+    case context of
+        Context funcId -> do
+            modify insertDecl
+            return ("_tmp" ++ show funcId ++ "()", "function _tmp" ++ show funcId ++ "(){\n"
+                        ++ snd c ++ 
+                        "if(" ++ fst c ++ "){\n    " 
+                        ++ snd c1 ++ "return " ++ fst c1
+                    ++ "\n} else{\n    "
+                        ++ snd c2 ++ "return " ++ fst c2
+                    ++ "\n}\n"
+                    ++ "\n}\n")
 
+-- function _tmp(varname) {
+--     decl;
+--     return ..;
+-- }
 gen (ELambda (varname, t1) e) = do
     c <- gen e
-    return $ "(" ++ tail (init (show varname)) ++ ")=>(" ++ c ++ ")"
+    context <- get
+    case context of 
+        Context funcId -> do
+            modify insertDecl
+            return ("_tmp" ++ show funcId, "function _tmp" ++ show funcId ++ "(" ++ tail (init (show varname)) ++"){\n"
+                        ++ snd c ++ "return " ++ fst c ++ ";}\n")
 
 
--- function _tmp1() {
--- 		let x=1; 
--- 		return x+1;
+-- function _tmp(x) {
+--      decl;
+-- 		return ..;
 -- 	}
 gen (ELet (varname, e1) e2) = do
     c1 <- gen e1
     c2 <- gen e2
     context <- get
     case context of
-        Context funcId funcDecl -> do
-            let decl = "function _tmp" ++ show funcId ++ "(){let "
-                        ++ tail (init (show varname)) ++ "=(" ++ c1 ++ "); return " 
-                        ++ c2 ++ ";}\n" 
-            modify $ insertDecl decl
-            return $ "_tmp" ++ show funcId ++ "()"
+        Context funcId -> do
+            modify insertDecl
+            let decl = "function _tmp" ++ show funcId ++ "(" ++ tail (init (show varname)) ++ "){\n"
+                        ++ snd c2 ++ 
+                        "return " ++ fst c2 ++ ";}\n"
+            return ("_tmp" ++ show funcId ++ "(" ++ fst c1 ++ ")", decl ++ snd c1)
 
 
 -- gen (ELetRec funcname (argname,argtype) (funcExpr, returntype) expr) = do
@@ -120,24 +142,22 @@ gen (ELet (varname, e1) e2) = do
 gen (EApply e1 e2) = do
     c1 <- gen e1
     c2 <- gen e2
-    return $ "(" ++ c1 ++ ")" ++ "(" ++ c2 ++ ")"
+    return ("(" ++ fst c1 ++ ")" ++ "(" ++ fst c2 ++ ")", snd c1 ++ snd c2)
 
-gen (EVar varname) = return varname
+gen (EVar varname) = return (varname, [])
 
 genCode :: Expr -> String
 genCode expr = 
-    case runState (gen expr) $ Context {
-                                funcId = 0,
-                                funcDecl = []
-                            } of
-        (a,s) -> 
-            let decls = foldl (++) [] (funcDecl s)
-            in decls ++ "\nconsole.log(" ++ a ++ ")"
-            -- foldl (++) a (funcDecl s)
+    case runState (gen expr) $ Context { funcId = 0 } of
+        (a,s) -> snd a ++ "\nconsole.log(" ++ fst a ++ ")"
 
--- run (EApply (ELambda ("x", TInt) (EAdd (EIntLit 1) (EVar "x"))) (EIntLit 2)) "output.js"
+-- run (  ELet ("y", EIntLit 2) (ELet ("x", EIntLit 1) (EEq (EVar "y") (EVar "x")))) "output.js"
+-- run (EApply (EApply (ELambda ("y", TInt) (ELambda ("x", TInt) (EAdd (EVar "y") (EVar "x")))) (EIntLit 1)) (EIntLit 2)) "output.js"
 run :: Expr -> String -> IO ()
 run expr path = do
     handle <- openFile path WriteMode
     hPutStr handle $ genCode expr
     hClose handle
+
+main :: IO()
+main = run (EApply (EApply (ELambda ("y", TInt) (ELambda ("x", TInt) (EAdd (EVar "y") (EVar "x")))) (EIntLit 1)) (EIntLit 2)) "output.js"

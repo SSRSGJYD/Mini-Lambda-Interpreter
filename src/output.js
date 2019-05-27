@@ -1,2 +1,6 @@
+function _tmp1(y){
+function _tmp0(x){
+return (y) + (x);}
+return _tmp0;}
 
-console.log(((x)=>((1) + (x)))(2))
+console.log(((_tmp1)(1))(2))
