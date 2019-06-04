@@ -209,7 +209,7 @@ patternParser = try (PBoolLit True <$ rword "True")
 -- definition: Data adtname := Constructor1 (t1,t2,..,tm) | Constructor2 (t1,t2,..,tn)
 adtDefineParser :: Parser ADT
 adtDefineParser = try $ do
-    rword "Data"
+    rword "data"
     adtname <- identifierParser
     symbol ":="
     constructors <- constructorsParser
@@ -235,17 +235,29 @@ adtPatternParser = try $ do
   return $ PData constructor patterns
 
 
--- main :: IO ()
--- main = 
---   -- input <- getContents
---   case runParser adtDefineParser "" "Data List := Cons (Int->Int, List->(Int->Int)) | Nil ()" of
---     Left error -> print error
---     Right a -> print a
+runAdtDefine :: IO ()
+runAdtDefine = do
+  input <- getContents
+  case runParser adtDefineParser "" input of
+    Left error -> print error
+    Right a -> print a
 
+runMiniParser :: String -> Either String Expr 
+runMiniParser input = 
+  case runParser exprParser "" input of
+    Left error -> Left $ show error
+    Right a -> Right a
+
+run :: IO ()
+run = do
+  input <- getContents
+  case runParser exprParser "" input of
+    Left error -> print error
+    Right a -> print a
 
   -- "\\x::Int -> $x"
   -- "letrec Int def inc(x::Int){x+1} in | inc $ 3"
   -- "case x+1>2 of True --> False; 3 --> 1; \'A\'-->\'B\'"
-  -- "Data List := Cons (Int->Int, List->(Int->Int)) | Nil ()"
+  -- "data List := Cons (Int->Int, List->(Int->Int)) | Nil ()"
 
 

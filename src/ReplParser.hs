@@ -69,7 +69,7 @@ showBindParser = try $ do
 
 helpParser :: MiniParser.Parser ReplStat
 helpParser = try $ do
-    rword ":h"
+    rword ":help"
     return Help
 
 quitParser :: MiniParser.Parser ReplStat

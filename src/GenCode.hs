@@ -4,6 +4,7 @@ import AST
 import Control.Monad.State
 import Data.Char
 import System.IO
+import qualified MiniParser
 
 newtype Context = Context { funcId :: Int }
 
@@ -157,21 +158,16 @@ genCode expr =
 
 -- run (  ELet ("y", EIntLit 2) (ELet ("x", EIntLit 1) (EEq (EVar "y") (EVar "x")))) "output.js"
 -- run (EApply (EApply (ELambda ("y", TInt) (ELambda ("x", TInt) (EAdd (EVar "y") (EVar "x")))) (EIntLit 1)) (EIntLit 2)) "output.js"
-run :: Expr -> String -> IO ()
-run expr path = do
+runGen :: Expr -> String -> IO ()
+runGen expr path = do
     handle <- openFile path WriteMode
     hPutStr handle $ genCode expr
     hClose handle
 
-expr_fact = EIf (EEq (EVar "x") (EIntLit 0))
-    (EIntLit 1)
-    (EMul 
-        (EVar "x") 
-        (EApply 
-        (EVar "fact") 
-        (ESub (EVar "x") (EIntLit 1))
-        )
-        )
 
 main :: IO()
-main = run (ELetRec "fact" ("x", TInt) (expr_fact, TInt) (EApply (EVar "fact") (EIntLit 5))) "output.js"
+main = do
+    input <- getLine
+    case MiniParser.runMiniParser input of
+        Left error -> print error
+        Right a -> runGen a "output.js"
