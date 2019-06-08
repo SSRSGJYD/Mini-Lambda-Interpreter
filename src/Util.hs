@@ -37,7 +37,8 @@ evalLambdaResultType t = case t of
     t -> t
 
 formatType :: Type -> Type
-formatType t = case t of
-    TArrow t1 t2 -> TArrow (formatType t1) (formatType t2)
-    TConstructor adtname constructor typeList -> TData adtname
-    _ -> t
+formatType t = t 
+-- formatType t = case t of
+    -- TArrow t1 t2 -> TArrow (formatType t1) (formatType t2)
+    -- TConstructor adtname constructor typeList -> TData adtname
+    -- _ -> t

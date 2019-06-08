@@ -183,7 +183,7 @@ eval (EVar varname) = do
             return et
         Nothing -> 
           case lookupConstructor context varname of
-            Just (adtname, argList) -> return $ evalMultiArgsFuncType argList (TConstructor adtname varname argList)
+            Just (adtname, argList) -> return $ evalMultiArgsFuncType argList (TData adtname)
             _ -> lift Nothing
                 
 eval (EApply e1 e2) = do
@@ -196,18 +196,14 @@ eval (EApply e1 e2) = do
 eval (ECase e list) = do
   et <- EvalType.eval e
   case list of
-    (p : ps) -> do 
-      ebool <- matchPatternT (fst p) et
-      if ebool
-      then do
-        modify (bindPatternT (fst p) et)
-        result <- mytrace ("[ECase] EvalType.eval: " ++ show (snd p)) EvalType.eval (snd p)
-        modify (unbindPatternT (fst p))
-        return result
-      else
-        mytrace ("[ECase] EvalType.eval: " ++ show (ECase e ps)) EvalType.eval (ECase e ps)
+    (pe : pes) -> do
+        ebool <- matchPatternT (fst pe) et
+        if ebool
+        then do
+            result <- evalPatternType et pe
+            evalCasePatternsType et result pes
+        else lift Nothing
     _ -> lift Nothing
-
 
 
 eval _ = lift Nothing
@@ -243,3 +239,117 @@ evalType (Program adts body) =
   in case mt of
     Just t -> Just $ formatType t
     _ -> Nothing
+
+
+evalCasePatternsType :: Type -> Type -> [(Pattern, Expr)] -> ContextStateT Type
+evalCasePatternsType et expectedType [] = return expectedType
+evalCasePatternsType et expectedType (pe : pes) =  do
+  ebool <- matchPatternT (fst pe) et
+  if ebool
+  then do
+      result <- evalPatternType et pe
+      if result == expectedType
+      then evalCasePatternsType et expectedType pes
+      else lift Nothing
+  else lift Nothing
+    
+
+evalPatternType :: Type -> (Pattern, Expr) -> ContextStateT Type
+evalPatternType et (p,e) = case p of
+  PBoolLit x -> eval e
+  PIntLit x -> eval e
+  PCharLit x -> eval e
+  PVar varname -> do
+    modify $ insertType varname et
+    result <- eval e
+    modify $ deleteType varname
+    return result
+  PData funcname patterns -> 
+    case et of
+      TData adtname -> do
+        context <- get
+        case ContextT.lookupConstructor context funcname of
+          Just (adtname', typeList) -> 
+            if adtname == adtname'
+            then do
+              modify $ bindPatternsT patterns typeList
+              result <- eval e
+              modify $ unbindPatternsT patterns
+              return result
+            else lift Nothing
+          _ -> lift Nothing
+      _ -> lift Nothing
+  _ -> lift Nothing
+
+
+matchPatternsT :: [Pattern] -> [Type] -> ContextStateT Bool
+matchPatternsT [] [] = return True
+matchPatternsT _ [] = return False
+matchPatternsT [] _ = return False
+matchPatternsT (p:ps) (et:ets) = do
+  ebool <- matchPatternT p et
+  if ebool
+  then matchPatternsT ps ets
+  else return False
+    
+
+matchPatternT :: Pattern -> Type -> ContextStateT Bool
+matchPatternT p et = 
+  case p of
+    PBoolLit x -> 
+      return $ et == TBool
+    PIntLit x -> 
+      return $ et == TInt
+    PCharLit x -> 
+      return $ et == TChar
+    PVar varname -> return True
+    PData funcname patterns -> 
+      case et of
+        TData adtname -> do
+          context <- get
+          case ContextT.lookupConstructor context funcname of
+            Just (adtname', _) -> return $ adtname == adtname'
+            _ -> return False
+        _ -> return False
+    _ -> return False 
+
+
+bindPatternsT :: [Pattern] -> [Type] -> ContextT -> ContextT
+bindPatternsT (p:ps) (t:ts) context = let context' = bindPatternT p t context
+                                      in bindPatternsT ps ts context'
+bindPatternsT _ _ context = context
+
+
+bindPatternT :: Pattern -> Type -> ContextT -> ContextT
+bindPatternT p et context = 
+  case p of
+    PBoolLit x -> context
+    PIntLit x -> context
+    PCharLit x -> context
+    PVar varname -> ContextT.insertType varname et context
+    PData funcname [] -> context
+    PData constructor patterns -> case et of
+      -- TConstructor adtname constructor argList -> bindPatternsT patterns argList context
+      TData adtname -> 
+        case ContextT.lookupConstructor context constructor of
+          Just (adtname, typeList) -> bindPatternsT patterns typeList context
+          _ -> context
+      _ -> context
+    _ -> context
+
+
+unbindPatternsT :: [Pattern] -> ContextT -> ContextT
+unbindPatternsT (p:ps) context = let context' = unbindPatternT p context
+                                in unbindPatternsT ps context'
+unbindPatternsT _ context = context
+
+
+unbindPatternT :: Pattern -> ContextT -> ContextT
+unbindPatternT p context = 
+  case p of
+    PBoolLit x -> context
+    PIntLit x -> context
+    PCharLit x -> context
+    PVar varname -> ContextT.deleteExpr varname context
+    PData constructor patterns -> unbindPatternsT patterns context
+    _ -> context

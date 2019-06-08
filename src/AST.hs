@@ -26,7 +26,7 @@ data Type
   | TData String
   -- ^代数数据类型。@TData adtName@ 中的 @adtName@ 是该类型的名称。
 
-  | TConstructor String String [Type]
+  -- | TConstructor String String [Expr]
 
   deriving (Show, Eq, Ord)
 
