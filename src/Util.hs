@@ -7,33 +7,29 @@ mytrace :: String -> a -> a
 -- mytrace = trace -- for debugging
 mytrace str x = x
 
-mytrace2 :: String -> a -> a
--- mytrace2 = trace -- for debugging
-mytrace2 str x = x
 
+-- wrapValueToExpr :: Value -> Expr
+-- wrapValueToExpr mv = case mv of
+--     VBool v -> EBoolLit v
+--     VInt v -> EIntLit v
+--     VChar v -> ECharLit v
+--     VData adtname constructor vs -> EConstructor constructor $ map wrapValueToExpr vs
 
-wrapValueToExpr :: Value -> Expr
-wrapValueToExpr mv = case mv of
-    VBool v -> EBoolLit v
-    VInt v -> EIntLit v
-    VChar v -> ECharLit v
-    VData adtname constructor vs -> EConstructor constructor $ map wrapValueToExpr vs
+-- parseValueToResult :: Value -> Result
+-- parseValueToResult v = case v of
+--     VBool b -> RBool b
+--     VInt i -> RInt i
+--     VChar c -> RChar c
+--     VData adtname constructor argList -> RData adtname constructor $ map parseValueToResult argList
+--     _ -> RInvalid
 
-parseValueToResult :: Value -> Result
-parseValueToResult v = case v of
-    VBool b -> RBool b
-    VInt i -> RInt i
-    VChar c -> RChar c
-    VData adtname constructor argList -> RData adtname constructor $ map parseValueToResult argList
-    _ -> RInvalid
-
-parseValueToType :: Value -> Maybe Type
-parseValueToType v = case v of
-    VBool _ -> Just TBool
-    VInt _ -> Just TInt
-    VChar _ -> Just TChar
-    VData adtname constructor argList -> Just $ TData adtname
-    _ -> Nothing
+-- parseValueToType :: Value -> Maybe Type
+-- parseValueToType v = case v of
+--     VBool _ -> Just TBool
+--     VInt _ -> Just TInt
+--     VChar _ -> Just TChar
+--     VData adtname constructor argList -> Just $ TData adtname
+--     _ -> Nothing
 
 evalLambdaResultType :: Type -> Type
 evalLambdaResultType t = case t of

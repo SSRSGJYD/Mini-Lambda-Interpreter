@@ -37,7 +37,7 @@ module ContextT where
   lookupADT context adtname = Map.lookup adtname $ adtMap context
   
   lookupConstructor :: ContextT -> String -> Maybe (String, [Type])
-  lookupConstructor context constructor = mytrace2 ("*** lookup constructor: " ++ show constructor) Map.lookup constructor $ constructorMap context
+  lookupConstructor context constructor = mytrace ("*** lookup constructor: " ++ show constructor) Map.lookup constructor $ constructorMap context
   
             
   -- type context operations

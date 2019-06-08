@@ -6,6 +6,16 @@ module EvalValue (evalValue, evalProgram) where
   import qualified Data.Map as Map
   import Util
   import Pattern
+
+
+  data Value
+    = VBool Bool
+    | VInt Int
+    | VChar Char
+    | VWHNF String String [Expr] ContextV -- WHNF
+    | VData String String [Value] -- VData adtname constructor [expr]
+    deriving (Show, Eq, Ord)
+
   
   getBool :: Expr -> ContextStateV Bool
   getBool e = do
@@ -184,8 +194,6 @@ module EvalValue (evalValue, evalProgram) where
             let args = getAllArgs context
             modify popAll
             mytrace ("[EApply] EvalValue.eval: " ++ show (EVar funcname)) EvalValue.evalVar (EVar funcname) ((e2, context):args)
-            -- put context
-            -- return ev
           _ -> case lookupRecExpr context funcname of
               Just ec -> do
                 put $ snd ec
@@ -200,24 +208,25 @@ module EvalValue (evalValue, evalProgram) where
               _ -> case lookupConstructor context funcname of
                       Just (adtname, argList) -> do
                         modify (pushArg (e2, context))
-                        mytrace ("[EApply] EvalValue.eval: " ++ show (EConstructor funcname [])) EvalValue.eval (EConstructor funcname [])
+                        mytrace ("[EApply] eval: " ++ show (EConstructor funcname [])) eval (EConstructor funcname [])
                       _ -> lift Nothing
       _ -> lift Nothing
   
   -- case
   eval (ECase e list) = do
-    ev <- EvalValue.eval e
+    context <- get
     case list of
       (p : ps) -> do 
-        ebool <- matchPattern (fst p) ev
+        ebool <- matchPattern (fst p) e
+        put context
         if ebool
         then do
-          modify (bindPattern (fst p) ev)
-          result <- mytrace ("[ECase] EvalValue.eval: " ++ show (snd p)) EvalValue.eval (snd p)
-          modify (unbindPattern (fst p))
+          bindPattern (fst p) e context
+          result <- mytrace ("[ECase] match succeed: " ++ show (fst p)) EvalValue.eval (snd p)
+          unbindPattern $ fst p
           return result
         else
-          mytrace ("[ECase] EvalValue.eval: " ++ show (ECase e ps)) EvalValue.eval (ECase e ps)
+          mytrace ("[ECase] match failed: " ++ show (fst p)) EvalValue.eval (ECase e ps)
       _ -> lift Nothing
   
   -- ADT constructor, similar to multi-lambda expression
@@ -225,20 +234,15 @@ module EvalValue (evalValue, evalProgram) where
     context <- get
     case lookupConstructor context constructor of
       Just (adtname, typeList)
-        | length argList == length typeList ->
-          do
-            evs <- mytrace ("[EConstructor] evalExprList: " ++ show argList) evalExprList argList
-            return $ VData adtname constructor evs
+        | length argList == length typeList -> 
+            return $ VWHNF adtname constructor argList context
         | otherwise -> 
           if emptyArg context
             then lift Nothing
             else
               let ec = firstArg context in do  
                 modify popArg
-                -- TODO
-                ev <- EvalValue.eval $ fst ec
-                let e' = wrapValueToExpr ev
-                mytrace ("[EConstructor] EvalValue.eval" ++ show (EConstructor constructor (argList ++ [e']))) EvalValue.eval $ EConstructor constructor (argList ++ [e'])
+                mytrace ("[EConstructor] EvalValue.eval: " ++ show (EConstructor constructor (argList ++ [fst ec]))) EvalValue.eval $ EConstructor constructor (argList ++ [fst ec])
                 
   -- variable with arg
   evalVar :: Expr -> [(Expr, ContextV)] -> ContextStateV Value
@@ -297,4 +301,110 @@ module EvalValue (evalValue, evalProgram) where
               exprRecMap = Map.empty,
               argList = [],
               logList = ["start EvalValue Program"] }
+
+
+  matchPatterns :: [Pattern] -> [Expr] -> ContextStateV Bool
+  matchPatterns [] [] = return True
+  matchPatterns _ [] = return False
+  matchPatterns [] _ = return False
+  matchPatterns (p:ps) (e:es) = do
+    context <- get
+    ebool <- matchPattern p e
+    put context
+    if ebool
+    then matchPatterns ps es
+    else return False
+      
+  matchPattern :: Pattern -> Expr -> ContextStateV Bool
+  matchPattern p e =
+    case p of
+      PBoolLit x -> do
+        ev <- mytrace ("match pattern eval: " ++ show e) eval e
+        return $ ev == VBool x
+      PIntLit x -> do
+        ev <- mytrace ("match pattern eval: " ++ show e) eval e
+        return $ ev == VInt x
+      PCharLit x -> do
+        ev <- mytrace ("match pattern eval: " ++ show e) eval e
+        return $ ev == VChar x
+      PVar varname -> return True
+      PData funcname patterns -> do
+        ev <- mytrace ("match pattern eval: " ++ show e) eval e
+        case ev of
+          VWHNF adtname constructor exprList context -> 
+            if funcname == constructor
+            then do
+              -- oldcontext <- get
+              put context
+              result <- matchPatterns patterns exprList
+              -- put oldcontext
+              return result
+            else return False
+          -- VData adtname constructor valueList -> 
+          --   if funcname == constructor
+          --   then matchPatterns patterns valueList
+          --   else return False
+          _ -> return False
+      _ -> return False
   
+  bindPatterns :: [Pattern] -> [Expr] -> ContextV -> ContextStateV ()
+  bindPatterns (p:ps) (e:es) context = do
+    bindPattern p e context
+    bindPatterns ps es context
+    return ()
+  bindPatterns _ _ _ = return ()
+  
+  
+  bindPattern :: Pattern -> Expr -> ContextV -> ContextStateV ()
+  bindPattern p e context = 
+    case p of
+      PBoolLit x -> return ()
+      PIntLit x -> return ()
+      PCharLit x -> return ()
+      PVar varname -> do
+        modify (ContextV.insertExpr varname (e, context))
+        return ()
+      PData funcname [] -> return ()
+      PData constructor patterns -> do
+        oldcontext <- get
+        ev <- EvalValue.eval e
+        put oldcontext
+        case ev of
+          VWHNF adtname constructor exprList context' -> do
+            bindPatterns patterns exprList context'
+            return ()
+          -- VData adtname constructor argList -> 
+          --   bindPatterns patterns argList context
+          _ -> lift Nothing
+      _ -> lift Nothing
+  
+
+  unbindPatterns :: [Pattern] -> ContextStateV ()
+  unbindPatterns (p:ps) = do
+    unbindPattern p
+    unbindPatterns ps
+    return ()
+  unbindPatterns _ = return ()
+
+
+  unbindPattern :: Pattern -> ContextStateV ()
+  unbindPattern p = 
+    case p of
+      PBoolLit x -> return ()
+      PIntLit x -> return ()
+      PCharLit x -> return ()
+      PVar varname -> do
+        modify $ ContextV.deleteExpr varname
+        return ()
+      PData constructor patterns -> 
+        unbindPatterns patterns
+      _ -> lift Nothing
+
+
+  parseValueToResult :: Value -> Result
+  parseValueToResult v = case v of
+      VBool b -> RBool b
+      VInt i -> RInt i
+      VChar c -> RChar c
+      VData adtname constructor argList -> RData adtname constructor $ map parseValueToResult argList
+      _ -> RInvalid

@@ -5,8 +5,7 @@ module AST
   , Expr (..)
   , ADT (..)
   , Program (..)
-  , Result (..)
-  , Value(..) ) where
+  , Result (..)) where
 
 
 -- |你的语言里的类型（type），包括基本数据类型、函数类型以及代数数据类型。
@@ -29,7 +28,7 @@ data Type
 
   | TConstructor String String [Type]
 
-  deriving (Show, Eq)
+  deriving (Show, Eq, Ord)
 
 
 -- |你的语言里的模式（pattern），用于模式匹配（pattern matching）。如果你要实现的语言不支持模式匹配，就不用管这个类型。
@@ -61,7 +60,7 @@ data Pattern
   | PData String [Pattern]
   -- ^代数数据类型模式，其中 @String@ 是某个代数数据类型的构造函数， @[Pattern]@ 是该构造函数的参数。
 
-  deriving (Show, Eq)
+  deriving (Show, Eq, Ord)
 
 
 -- |你的语言里的表达式（expression），包括基本数据类型字面量、基本数据类型之间的运算、条件语句、let-In 表达式、lambda 表达式、函数定义、代数数据类型定义。你的语言里每一个合法的表达式都有一个类型和一个值；你的语言里的类型是 Haskell 里 @Type@ 类型的变量。
@@ -200,7 +199,7 @@ data Expr
   | EConstructor String [Expr]
   -- 构造函数应用了若干参数，可以用EApply和EVar来代替，写成这样方便于进行模式匹配
 
-  deriving (Show, Eq)
+  deriving (Show, Eq, Ord)
 
 
 -- |代数数据类型定义。
@@ -238,9 +237,10 @@ data Result
   deriving (Show, Eq)
 
 
-data Value
-  = VBool Bool
-  | VInt Int
-  | VChar Char
-  | VData String String [Value] -- VData adtname constructor [value]
-  deriving (Show, Eq, Ord)
+-- data Value
+--   = VBool Bool
+--   | VInt Int
+--   | VChar Char
+--   | VWHNF String String [Expr]  -- WHNF
+--   | VData String String [Value] -- VData adtname constructor [expr]
+--   deriving (Show, Eq, Ord)

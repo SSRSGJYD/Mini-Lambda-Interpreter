@@ -84,4 +84,6 @@ test-suite fpproject-test
     , mtl
     , megaparsec
     , parser-combinators
+    , tasty
+    , tasty-hunit
   default-language: Haskell2010
