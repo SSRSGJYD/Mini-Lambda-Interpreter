@@ -194,7 +194,9 @@ eval (EApply e1 e2) = do
     _ -> lift Nothing
 
 eval (ECase e list) = do
+  context <- get
   et <- EvalType.eval e
+  put context
   case list of
     (pe : pes) -> do
         ebool <- matchPatternT (fst pe) et
@@ -350,6 +352,6 @@ unbindPatternT p context =
     PBoolLit x -> context
     PIntLit x -> context
     PCharLit x -> context
-    PVar varname -> ContextT.deleteExpr varname context
+    PVar varname -> ContextT.deleteType varname context
     PData constructor patterns -> unbindPatternsT patterns context
     _ -> context

@@ -40,4 +40,4 @@ testTasks =
 
 main :: IO ()
 main = defaultMain $ testGroup "" testTasks
--- main = print $ evalValue (program adt')
+-- main = print $ evalType (program adt')

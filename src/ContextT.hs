@@ -61,7 +61,7 @@ module ContextT where
     case Map.lookup varname typeMap of
       Just (t1:t2:t3) -> mytrace ("*** delete type: " ++ varname) ContextT adtMap constructorMap (Map.update (\xs -> Just $ init xs) varname typeMap) exprMap  log
       Just [t] -> mytrace ("*** delete type: " ++ varname) ContextT adtMap constructorMap (Map.delete varname typeMap) exprMap  log
-      _ -> mytrace ("*** delete Nothing") context
+      _ -> mytrace ("*** delete " ++ varname ++ "failed") context
   
   -- expr binding context operations
   containExpr :: ContextT -> String -> Bool
