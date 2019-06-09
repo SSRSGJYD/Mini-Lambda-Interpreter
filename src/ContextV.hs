@@ -41,30 +41,6 @@ lookupADT context adtname = Map.lookup adtname $ adtMap context
 lookupConstructor :: ContextV -> String -> Maybe (String, [Type])
 lookupConstructor context constructor = Map.lookup constructor $ constructorMap context
 
-          
--- type context operations
--- containType :: ContextV -> String -> Bool
--- containType context varname = Map.member varname (typeMap context)
-
--- lookupType :: ContextV -> String -> Maybe Type
--- lookupType context varname = mytrace ("*** lookup type: " ++ varname ++ " == " ++ show e) e
---   where e = case Map.lookup varname (typeMap context) of
---               Just types -> Just $ head types
---               _ -> Nothing
-
--- insertType :: String -> Type -> ContextV -> ContextV
--- insertType varname mtype context@(ContextV adtMap constructorMap typeMap exprMap argList log) = 
---   if containType context varname
---   then mytrace ("*** insert type: " ++ varname ++ " := " ++ show mtype) ContextV adtMap constructorMap (Map.update (\xs -> Just (mtype : xs)) varname typeMap) exprMap argList log
---   else mytrace ("*** insert type: " ++ varname ++ " := " ++ show mtype) ContextV adtMap constructorMap (Map.insert varname [mtype] typeMap) exprMap argList log
-
--- deleteType :: String -> ContextV -> ContextV
--- deleteType varname context@(ContextV adtMap constructorMap typeMap exprMap argList log) = 
---   case Map.lookup varname typeMap of
---     Just (t1:t2:t3) -> mytrace ("*** delete type: " ++ varname) ContextV adtMap constructorMap (Map.update (\xs -> Just $ init xs) varname typeMap) exprMap argList log
---     Just [t] -> mytrace ("*** delete type: " ++ varname) ContextV adtMap constructorMap (Map.delete varname typeMap) exprMap argList log
---     _ -> mytrace ("*** delete Nothing") context
-
 -- expr binding context operations
 containExpr :: ContextV -> String -> Bool
 containExpr context varname = Map.member varname (exprMap context)

@@ -5,7 +5,6 @@ import ContextT
 import Control.Monad.State
 import qualified Data.Map as Map
 import Util
-import Pattern
 
 
 isBool :: Expr -> ContextStateT Type
@@ -36,21 +35,11 @@ isInt2 e1 e2 = do
     TInt -> isInt e2
     _ -> lift Nothing
 
-isChar :: Expr -> ContextStateT Type
-isChar e = do
-  et <- EvalType.eval e
-  case et of
-    TChar -> return TChar
-    _ -> lift Nothing
-
 isSameType :: Expr -> Expr -> ContextStateT Bool
 isSameType e1 e2 = do
   et1 <- EvalType.eval e1
   et2 <- EvalType.eval e2
-  return $ eqType et1 et2
-
-eqType :: Type -> Type -> Bool
-eqType t1 t2 = formatType t1 == formatType t2
+  return $ et1 == et2
 
 isComparableType :: Expr -> ContextStateT Bool
 isComparableType e = do
@@ -67,24 +56,7 @@ eval (ECharLit _) = return TChar
 
 eval (ENot e) = isBool e >> return TBool
 eval (EAnd e1 e2) = isBool2 e1 e2
-  -- ev1 <- getBool e1
-  -- if not ev1
-  -- then return TBool
-  -- else do
-  --     et2 <- EvalType.eval e2
-  --     if et2 == TBool
-  --     then return TBool
-  --     else lift Nothing
-
 eval (EOr e1 e2) = isBool2 e1 e2
-  -- ev1 <- getBool e1
-  -- if ev1
-  -- then return TBool
-  -- else do
-  --     et2 <- EvalType.eval e2
-  --     if et2 == TBool
-  --     then return TBool
-  --     else lift Nothing
 
 eval (EAdd e1 e2) = isInt2 e1 e2 >> return TInt
 eval (ESub e1 e2) = isInt2 e1 e2 >> return TInt
@@ -140,10 +112,8 @@ eval (EIf e1 e2 e3) = do
 
 eval (ELambda (varname, t1) e) = do
   modify (insertType varname t1)
-  -- modify (insertExpr varname e)
   t2 <- EvalType.eval e
   modify (deleteType varname)
-  -- modify (deleteExpr varname)
   return $ TArrow t1 t2
 
 eval (ELet (varname, e1) e2) = do
@@ -156,7 +126,7 @@ eval ep@(ELetRec funcname (argname,argtype) (funcExpr, returntype) expr) = do
   modify (insertExpr funcname (ELambda (argname, argtype) funcExpr))
   modify (insertType funcname (TArrow argtype returntype))
   et <- mytrace ("[ELetRec] EvalType.eval: " ++ show (ELambda (argname, argtype) funcExpr)) EvalType.eval $ ELambda (argname, argtype) funcExpr
-  if eqType et $ TArrow argtype returntype
+  if et == TArrow argtype returntype
   then do
     modify (deleteType funcname)
     modify (insertType funcname et)
@@ -169,18 +139,15 @@ eval ep@(ELetRec funcname (argname,argtype) (funcExpr, returntype) expr) = do
     modify (deleteType funcname)
     lift Nothing
 
-
+-- when function is a variable
 eval (EVar varname) = do
   context <- get
   case lookupType context varname of 
     Just t -> return t
     Nothing -> 
       case lookupExpr context varname of 
-        Just e -> do
-            -- modify (deleteExpr varname)
-            et <- mytrace ("[EVar] EvalType.eval: " ++ show e) EvalType.eval e
-            -- modify (insertExpr varname e)
-            return et
+        Just e ->
+            mytrace ("[EVar] EvalType.eval: " ++ show e) EvalType.eval e
         Nothing -> 
           case lookupConstructor context varname of
             Just (adtname, argList) -> return $ evalMultiArgsFuncType argList (TData adtname)
@@ -190,7 +157,7 @@ eval (EApply e1 e2) = do
   et1 <- mytrace ("[EApply] EvalType.eval: " ++ show e1) EvalType.eval e1
   et2 <- mytrace ("[EApply] EvalType.eval: " ++ show e2) EvalType.eval e2
   case et1 of 
-    TArrow t1 t2 -> if eqType et2 t1 then return t2 else lift Nothing
+    TArrow t1 t2 -> if et2 == t1 then return t2 else lift Nothing
     _ -> lift Nothing
 
 eval (ECase e list) = do
@@ -207,40 +174,7 @@ eval (ECase e list) = do
         else lift Nothing
     _ -> lift Nothing
 
-
 eval _ = lift Nothing
-
-
-evalMultiArgsFuncType :: [Type] -> Type -> Type
-evalMultiArgsFuncType argTypes returnType = case argTypes of
-  [] -> returnType
-  (t:ts) -> TArrow t $ evalMultiArgsFuncType ts returnType
-
-
-evalApplyMultiArgsFuncType :: [Expr] -> Type -> ContextStateT Type
-evalApplyMultiArgsFuncType argTypes funcType = 
-  case argTypes of
-    [] -> return funcType
-    (arg : args) -> case funcType of
-        TArrow t1 t2 -> do
-          et <- mytrace ("[EConstructor] EvalType.eval: " ++ show arg) EvalType.eval arg
-          if eqType et t1
-          then evalApplyMultiArgsFuncType args t2
-          else lift Nothing
-        _ -> lift Nothing
-
-
-evalType :: Program -> Maybe Type
-evalType (Program adts body) = 
-  let mt = evalStateT (EvalType.eval body) $
-            ContextT { adtMap = initAdtMap adts, 
-                      constructorMap = initConstructorMap adts,
-                      typeMap = Map.empty, 
-                      exprMap = Map.empty,
-                      logList = ["start EvalType Program"] }
-  in case mt of
-    Just t -> Just $ formatType t
-    _ -> Nothing
 
 
 evalCasePatternsType :: Type -> Type -> [(Pattern, Expr)] -> ContextStateT Type
@@ -281,8 +215,6 @@ evalPatternType et (p,e) = case p of
             else lift Nothing
           _ -> lift Nothing
       _ -> lift Nothing
-  _ -> lift Nothing
-
 
 matchPatternsT :: [Pattern] -> [Type] -> ContextStateT Bool
 matchPatternsT [] [] = return True
@@ -313,7 +245,6 @@ matchPatternT p et =
             Just (adtname', _) -> return $ adtname == adtname'
             _ -> return False
         _ -> return False
-    _ -> return False 
 
 
 bindPatternsT :: [Pattern] -> [Type] -> ContextT -> ContextT
@@ -331,13 +262,11 @@ bindPatternT p et context =
     PVar varname -> ContextT.insertType varname et context
     PData funcname [] -> context
     PData constructor patterns -> case et of
-      -- TConstructor adtname constructor argList -> bindPatternsT patterns argList context
       TData adtname -> 
         case ContextT.lookupConstructor context constructor of
           Just (adtname, typeList) -> bindPatternsT patterns typeList context
           _ -> context
       _ -> context
-    _ -> context
 
 
 unbindPatternsT :: [Pattern] -> ContextT -> ContextT
@@ -354,4 +283,11 @@ unbindPatternT p context =
     PCharLit x -> context
     PVar varname -> ContextT.deleteType varname context
     PData constructor patterns -> unbindPatternsT patterns context
-    _ -> context
+
+evalType :: Program -> Maybe Type
+evalType (Program adts body) = evalStateT (EvalType.eval body) $
+            ContextT { adtMap = initAdtMap adts, 
+                      constructorMap = initConstructorMap adts,
+                      typeMap = Map.empty, 
+                      exprMap = Map.empty,
+                      logList = ["start EvalType Program"] }

@@ -228,19 +228,10 @@ data Result
   | RChar Char
   -- ^存放字符类型求值结果。
 
-  | RData String String [Result] -- RData adtname constructor [result]
+  | RData String String -- RData adtname constructor
   -- ADT类型的求值结果
   
   | RInvalid
   -- ^不合法的求值结果，包括 1. 求值发生错误；2. 求值结果并非布尔类型、有限精度整数类型、字符类型。
 
   deriving (Show, Eq)
-
-
--- data Value
---   = VBool Bool
---   | VInt Int
---   | VChar Char
---   | VWHNF String String [Expr]  -- WHNF
---   | VData String String [Value] -- VData adtname constructor [expr]
---   deriving (Show, Eq, Ord)

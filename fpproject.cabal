@@ -34,7 +34,6 @@ library
       ContextV
       ReplContext
       Util
-      Pattern
       MiniParser
       ReplParser
       MiniRepl
