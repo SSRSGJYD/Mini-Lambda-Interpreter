@@ -20,12 +20,14 @@ rword w = (lexeme . try) (string w *> notFollowedBy alphaNumChar)
 
 reserve :: [String] -- list of reserve words
 reserve = ["True","False","not","and","or","add","sub","mul","div","mod",
-            "if","then","else","let","in","letrec","where","case","data", "\\"]
+            "if","then","else","let","in","letrec","where","case","data", 
+            "\\", ".", "->", "-->", "$", "+", "-", "*", "/", "%", "&&", "||",
+            "!","==","/=","="]
 
 sc :: Parser ()
 sc = L.space space1 lineCmnt blockCmnt
   where
-    lineCmnt  = L.skipLineComment "//"
+    lineCmnt  = L.skipLineComment "--"
     blockCmnt = L.skipBlockComment "/*" "*/"
 
 lexeme :: Parser a -> Parser a
@@ -75,7 +77,7 @@ exprParser = makeExprParser termParser operator
         <|> try letrecExprParser
         <|> try lambdaExprParser
         <|> try caseExprParser
-        <|> try applyExprParser
+        -- <|> try applyExprParser
         <|> try variableExprParser
         <|> try (parensParser exprParser)
 
@@ -90,6 +92,8 @@ termParser = try (EBoolLit True <$ rword "True")
 operator :: [[Operator Parser Expr]]     
 operator = 
   [
+    [ InfixL (EApply <$ symbol "$") ],
+
     [ Prefix (ENot <$ rword "not") ],
 
     [ InfixL (EAnd <$ rword "and"),
@@ -190,17 +194,17 @@ goLambda (arg:args) e = ELambda (varname, vartype) $ goLambda args e
 
 variableExprParser :: Parser Expr
 variableExprParser = try $ do
-    void (symbol "$")
+    -- void (symbol "#")
     varname <- identifierParser
     return (EVar varname)
 
-applyExprParser :: Parser Expr
-applyExprParser = try $ do
-    void (symbol "|")
-    e1 <- exprParser
-    rword  "$"
-    e2 <- exprParser
-    return (EApply e1 e2)
+-- applyExprParser :: Parser Expr
+-- applyExprParser = try $ do
+--     void (symbol "|")
+--     e1 <- exprParser
+--     rword  "$"
+--     e2 <- exprParser
+--     return (EApply e1 e2)
 
 -- deal with case expr and patterns
 caseExprParser :: Parser Expr
@@ -287,7 +291,7 @@ run = do
     Right a -> print a
 
 -- examples
--- "\\x::Int -> $x"
+-- "(\(x::Int) -> #x+1) $ 3"
 -- "letrec Int def inc(x::Int){x+1} in | inc $ 3"
 -- "case x+1>2 of True --> False; 3 --> 1; \'A\'-->\'B\'"
 -- "data List = Cons (Int->Int, List->(Int->Int)) | Nil ()"

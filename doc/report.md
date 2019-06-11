@@ -58,9 +58,9 @@
 <args> := <arg>, <arg>, ... , <arg>
 <arg> := <identifier> :: <type>
 
-<apply_expr> := | <expr> $ <expr>
+<apply_expr> := <expr> $ <expr>
 
-<variable_expr> := $<identifier>
+<variable_expr> := <identifier>
 
 <case_expr> := case <expr> of <patternAssigns>
 
