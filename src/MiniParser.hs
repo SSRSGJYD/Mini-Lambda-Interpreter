@@ -11,6 +11,8 @@ import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 
 type Parser = Parsec Void String
+data BindExpr = BindExpr String Expr
+data Arg = Arg String Type 
 
 -- common used components
 rword :: String -> Parser ()
@@ -18,7 +20,7 @@ rword w = (lexeme . try) (string w *> notFollowedBy alphaNumChar)
 
 reserve :: [String] -- list of reserve words
 reserve = ["True","False","not","and","or","add","sub","mul","div","mod",
-            "if","then","else","let","in","letrec","where","case","Data"]
+            "if","then","else","let","in","letrec","where","case","data", "\\"]
 
 sc :: Parser ()
 sc = L.space space1 lineCmnt blockCmnt
@@ -119,15 +121,29 @@ ifExprParser = try $ do
     e3 <- exprParser
     return (EIf e1 e2 e3)
 
+-- let expression
+bindsExprParser :: Parser [BindExpr]
+bindsExprParser = sepBy1 bindExprParser (symbol ",")
+
+bindExprParser :: Parser BindExpr
+bindExprParser = try $ do
+  varname <- identifierParser
+  void (symbol "=")
+  e <- exprParser
+  return $ BindExpr varname e
+
 letExprParser :: Parser Expr
 letExprParser = try $ do
     rword "let"
-    varname <- identifierParser
-    void (symbol ":=")
-    e2 <- exprParser
+    binds <- bindsExprParser
     rword "in"
     expr <- exprParser
-    return (ELet (varname, e2) expr)
+    return $ goLet binds expr
+
+goLet :: [BindExpr] -> Expr -> Expr
+goLet [] e = e
+goLet (bind:binds) e = ELet (varname, expr) $ goLet binds e
+    where BindExpr varname expr = bind
 
 letrecExprParser :: Parser Expr
 letrecExprParser = try $ do
@@ -147,15 +163,30 @@ letrecExprParser = try $ do
     expr <- exprParser
     return (ELetRec funcname (argname, argtype) (funcbody, returntype) expr)
 
+-- lambda expression
+argsParser :: Parser [Arg]
+argsParser = sepBy1 argParser (symbol ",")
+
+argParser :: Parser Arg
+argParser = try $ do
+  varname <- identifierParser
+  void (symbol "::")
+  vartype <- typeParser
+  return $ Arg varname vartype
+
 lambdaExprParser :: Parser Expr
 lambdaExprParser = try $ do
-    void (symbol "\\")
-    varname <- identifierParser
-    void (symbol "::")
-    vartype <- typeParser
+    void (symbol "\\(")
+    args <- argsParser
+    void (symbol ")")
     void (symbol "->")
     expr <- exprParser
-    return (ELambda (varname, vartype) expr)
+    return $ goLambda args expr
+
+goLambda :: [Arg] -> Expr -> Expr
+goLambda [] e = e
+goLambda (arg:args) e = ELambda (varname, vartype) $ goLambda args e
+    where Arg varname vartype = arg
 
 variableExprParser :: Parser Expr
 variableExprParser = try $ do
@@ -211,7 +242,7 @@ adtDefineParser :: Parser ADT
 adtDefineParser = try $ do
     rword "data"
     adtname <- identifierParser
-    symbol ":="
+    symbol "="
     constructors <- constructorsParser
     return $ ADT adtname constructors
 
@@ -255,9 +286,10 @@ run = do
     Left error -> print error
     Right a -> print a
 
-  -- "\\x::Int -> $x"
-  -- "letrec Int def inc(x::Int){x+1} in | inc $ 3"
-  -- "case x+1>2 of True --> False; 3 --> 1; \'A\'-->\'B\'"
-  -- "data List := Cons (Int->Int, List->(Int->Int)) | Nil ()"
+-- examples
+-- "\\x::Int -> $x"
+-- "letrec Int def inc(x::Int){x+1} in | inc $ 3"
+-- "case x+1>2 of True --> False; 3 --> 1; \'A\'-->\'B\'"
+-- "data List = Cons (Int->Int, List->(Int->Int)) | Nil ()"
 
 

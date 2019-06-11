@@ -33,6 +33,7 @@
 		| <type> -> <type>
 <binary_operator> := and | or | * | / | % | + | - | > | < | >= | <= | == | /=
 <unary_operator> := not
+
 <expr> := <term> <binary_operator> <term> 
 		| <unary_operator> <term>
 		| <if_expr>
@@ -43,22 +44,34 @@
 		| <apply_expr>
 		| <variable_expr>
 		| (<expr>)
+		
 <if_expr> := if <expr> then <expr> else <expr>
-<let_expr> := let <identifier> := <expr> in <expr>
+
+<let_expr> := let <binds> in <expr>
+<binds> := <bind>, <bind>, ... , <bind>
+<bind> := <identifier> = <expr>
+
 <letrec_expr> := letrec <type> def <identifier>(<identifier :: <type>>){<expr>}
 				 in <expr>
-<lambda_expr> := \ <identifier> :: <type> -> <expr>
+				 
+<lambda_expr> := \(<args>) -> <expr>
+<args> := <arg>, <arg>, ... , <arg>
+<arg> := <identifier> :: <type>
+
 <apply_expr> := | <expr> $ <expr>
+
 <variable_expr> := $<identifier>
 
 <case_expr> := case <expr> of <patternAssigns>
+
 <patternAssigns> := <patternAssign>; <patternAssign>; .. ;<patternAssign>
 <patternAssign> := <patterns> --> <expr>
 <patterns> := <pattern>, <pattern>, .. ,<pattern>
 <pattern> := <bool> | <int> | <char> | <identifier> | <adtpattern>
 <adtpattern> := [<identifier>] patterns
+
 -- adt definition grammar
-<adtDefine> := data <identifier> := <constructors>
+<adtDefine> := data <identifier> = <constructors>
 <constructors> := <constructor> | <constructor> | .. | <constructor>
 <constructor> := <identifier>(<types>)
 <types> := <type> , <type>, .. , <type>
@@ -91,6 +104,7 @@ let <identifier> = <expr>
 -- eval type of an expression
 -- example:
 -- :t let x = 3 in x
+-- :t \(f::Int->Int, y::Int) -> |f $y
 :t <expr>
 
 -- eval value of an expression
@@ -101,7 +115,7 @@ eval <expr>
 -- multi-lines block
 -- example1:
 -- :{
--- data List := Cons (Int->Int, List->(Int->Int)) 
+-- data List = Cons (Int->Int, List->(Int->Int)) 
 --			| Nil ()
 -- :}
 -- example2:
