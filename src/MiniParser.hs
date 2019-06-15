@@ -99,6 +99,9 @@ operator =
     [ InfixL (EAnd <$ rword "and"),
       InfixL (EOr <$ rword "or") ],
 
+    [ InfixL (EEq <$ symbol "=="), 
+    InfixL (ENeq <$ symbol "/=") ],
+
     [ InfixL (EMul <$ symbol "*"),
       InfixL (EDiv <$ symbol "/"),
       InfixL (EMod <$ symbol "%") ],
@@ -109,10 +112,7 @@ operator =
     [ InfixL (EGt <$ symbol ">"),
       InfixL (ELt <$ symbol "<"),
       InfixL (EGe <$ symbol ">="),
-      InfixL (ELe <$ symbol "<=") ],
-
-    [ InfixL (EEq <$ symbol "=="), 
-      InfixL (ENeq <$ symbol "/=") ]
+      InfixL (ELe <$ symbol "<=") ]
   ]
 
 ifExprParser :: Parser Expr
@@ -290,10 +290,18 @@ run = do
     Left error -> print error
     Right a -> print a
 
--- examples
--- "(\(x::Int) -> #x+1) $ 3"
--- "letrec Int def inc(x::Int){x+1} in | inc $ 3"
--- "case x+1>2 of True --> False; 3 --> 1; \'A\'-->\'B\'"
--- "data List = Cons (Int->Int, List->(Int->Int)) | Nil ()"
+testParser :: String -> IO ()
+testParser input = 
+  case runParser exprParser "" input of
+    Left error -> print $ errorBundlePretty error
+    Right a -> print a
 
-
+test :: IO ()
+test = do
+  testParser "True"
+  testParser "40+2"
+  testParser "\'@\' /= \'@\'"
+  testParser "if False then 42 else 233"
+  testParser "\\(x::Int)->x+1"
+  testParser "let even = (\\(x::Int) -> (x % 2) == 0) in even $ 42"
+  testParser "letrec Int def fact(x::Int){if x == 0 then 1 else x * (fact $ (x-1))} in fact $ 5"

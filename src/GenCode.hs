@@ -156,8 +156,7 @@ genCode expr =
     case runState (gen expr) $ Context { funcId = 0 } of
         (a,s) -> snd a ++ "\nconsole.log(" ++ fst a ++ ")"
 
--- run (  ELet ("y", EIntLit 2) (ELet ("x", EIntLit 1) (EEq (EVar "y") (EVar "x")))) "output.js"
--- run (EApply (EApply (ELambda ("y", TInt) (ELambda ("x", TInt) (EAdd (EVar "y") (EVar "x")))) (EIntLit 1)) (EIntLit 2)) "output.js"
+
 runGen :: Expr -> String -> IO ()
 runGen expr path = do
     handle <- openFile path WriteMode
@@ -171,3 +170,12 @@ main = do
     case MiniParser.runMiniParser input of
         Left error -> print error
         Right a -> runGen a "output.js"
+
+-- examples:
+-- True
+-- 40+2
+-- '@' /= '@'
+-- if False then 42 else 233
+-- \(x::Int)->x+1
+-- let even = (\(x::Int) -> (x % 2) == 0) in even $ 42
+-- letrec Int def fact(x::Int){if x == 0 then 1 else x * (fact $ (x-1))} in fact $ 5

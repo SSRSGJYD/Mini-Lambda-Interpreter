@@ -153,3 +153,12 @@ main = do
             adtMap = Map.empty,
             bindList = []
         }
+
+-- examples:
+-- True
+-- 40+2
+-- '@' /= '@'
+-- if False then 42 else 233
+-- \(x::Int)->x+1
+-- let even = (\(x::Int) -> (x % 2) == 0) in even $ 42
+-- letrec Int def fact(x::Int){if x == 0 then 1 else x * (fact $ (x-1))} in fact $ 5
