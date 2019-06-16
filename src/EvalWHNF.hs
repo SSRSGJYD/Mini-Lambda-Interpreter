@@ -1,115 +1,122 @@
-module EvalValue (evalValue, evalProgram) where
+module EvalWHNF (eval, Value(..)) where
 
 import AST
 import ContextV
 import Control.Monad.State
 import qualified Data.Map as Map
 import Util
-import EvalWHNF
 
+
+data Value
+  = VBool Bool
+  | VInt Int
+  | VChar Char
+  | VWHNF String String [Expr] ContextV -- Weak Head Normal Form
+  | VData String [Value] -- VData Constructor argList
+  deriving (Show, Eq, Ord)
 
 getBool :: Expr -> ContextStateV Bool
 getBool e = do
-  ev <- EvalValue.eval e
+  ev <- EvalWHNF.eval e
   case ev of
-    EvalWHNF.VBool b -> return b
+    VBool b -> return b
     _ -> lift Nothing
 
 getInt :: Expr -> ContextStateV Int
 getInt e = do
-  ev <- EvalValue.eval e
+  ev <- EvalWHNF.eval e
   case ev of
-    EvalWHNF.VInt b -> return b
+    VInt b -> return b
     _ -> lift Nothing
 
 eval :: Expr -> ContextStateV Value
-eval (EBoolLit b) = return $ EvalWHNF.VBool b
-eval (EIntLit i) = return $ EvalWHNF.VInt i
-eval (ECharLit c) = return $ EvalWHNF.VChar c
+eval (EBoolLit b) = return $ VBool b
+eval (EIntLit i) = return $ VInt i
+eval (ECharLit c) = return $ VChar c
 
-eval (ENot e) = getBool e >>= \b -> return (EvalWHNF.VBool $ not b)
+eval (ENot e) = getBool e >>= \b -> return (VBool $ not b)
 eval (EAnd e1 e2) = do
   ev1 <- getBool e1
   if not ev1
-  then return $ EvalWHNF.VBool False
+  then return $ VBool False
   else 
     do
       ev2 <- getBool e2
-      return $ EvalWHNF.VBool ev2
+      return $ VBool ev2
 
 eval (EOr e1 e2) = do
   ev1 <- getBool e1
   if ev1
-  then return $ EvalWHNF.VBool True
+  then return $ VBool True
   else 
     do
       ev2 <- getBool e2
-      return $ EvalWHNF.VBool ev2
+      return $ VBool ev2
 
 eval (EAdd e1 e2) = do
   ev1 <- getInt e1
   ev2 <- getInt e2
-  return (EvalWHNF.VInt (ev1 + ev2))
+  return (VInt (ev1 + ev2))
 
 eval (ESub e1 e2) = do
   ev1 <- getInt e1
   ev2 <- getInt e2
-  return (EvalWHNF.VInt (ev1 - ev2))
+  return (VInt (ev1 - ev2))
 
 eval (EMul e1 e2) = do
   ev1 <- getInt e1
   ev2 <- getInt e2
-  return (EvalWHNF.VInt (ev1 * ev2))
+  return (VInt (ev1 * ev2))
 
 eval (EDiv e1 e2) = do
   ev1 <- getInt e1
   ev2 <- getInt e2
   if ev2 == 0
-  then return $ EvalWHNF.VInt 0
-  else return (EvalWHNF.VInt (ev1 `div` ev2))
+  then return $ VInt 0
+  else return (VInt (ev1 `div` ev2))
 
 eval (EMod e1 e2) = do
   ev1 <- getInt e1
   ev2 <- getInt e2
   if ev2 == 0
-  then return $ EvalWHNF.VInt 0
-  else return (EvalWHNF.VInt (ev1 `mod` ev2))
+  then return $ VInt 0
+  else return (VInt (ev1 `mod` ev2))
 
 eval (EEq e1 e2) = do
-  ev1 <- EvalValue.eval e1
-  ev2 <- EvalValue.eval e2
-  return (EvalWHNF.VBool $ ev1 == ev2)
+  ev1 <- EvalWHNF.eval e1
+  ev2 <- EvalWHNF.eval e2
+  return (VBool $ ev1 == ev2)
 
 eval (ENeq e1 e2) = do
-  ev1 <- EvalValue.eval e1
-  ev2 <- EvalValue.eval e2
-  return (EvalWHNF.VBool $ ev1 /= ev2)
+  ev1 <- EvalWHNF.eval e1
+  ev2 <- EvalWHNF.eval e2
+  return (VBool $ ev1 /= ev2)
 
 eval (ELt e1 e2) = do
-  ev1 <- EvalValue.eval e1
-  ev2 <- EvalValue.eval e2
-  return (EvalWHNF.VBool $ ev1 < ev2)
+  ev1 <- EvalWHNF.eval e1
+  ev2 <- EvalWHNF.eval e2
+  return (VBool $ ev1 < ev2)
 
 eval (EGt e1 e2) = do
-  ev1 <- EvalValue.eval e1
-  ev2 <- EvalValue.eval e2
-  return (EvalWHNF.VBool $ ev1 > ev2)
+  ev1 <- EvalWHNF.eval e1
+  ev2 <- EvalWHNF.eval e2
+  return (VBool $ ev1 > ev2)
 
 eval (ELe e1 e2) = do
-  ev1 <- EvalValue.eval e1
-  ev2 <- EvalValue.eval e2
-  return (EvalWHNF.VBool $ ev1 <= ev2)
+  ev1 <- EvalWHNF.eval e1
+  ev2 <- EvalWHNF.eval e2
+  return (VBool $ ev1 <= ev2)
 
 eval (EGe e1 e2) = do
-  ev1 <- EvalValue.eval e1
-  ev2 <- EvalValue.eval e2
-  return (EvalWHNF.VBool $ ev1 >= ev2)
+  ev1 <- EvalWHNF.eval e1
+  ev2 <- EvalWHNF.eval e2
+  return (VBool $ ev1 >= ev2)
     
 eval (EIf e1 e2 e3) = do
-  ev1 <- EvalValue.eval e1
+  ev1 <- EvalWHNF.eval e1
   case ev1 of
-    EvalWHNF.VBool True -> mytrace ("[if condition true] EvalValue.eval: " ++ show e2) EvalValue.eval e2
-    EvalWHNF.VBool False -> mytrace ("[if condition false] EvalValue.eval: " ++ show e3) EvalValue.eval e3
+    VBool True -> mytrace ("[if condition true] EvalWHNF.eval: " ++ show e2) EvalWHNF.eval e2
+    VBool False -> mytrace ("[if condition false] EvalWHNF.eval: " ++ show e3) EvalWHNF.eval e3
 
 -- Lambda
 eval (ELambda (varname, vartype) e) = do
@@ -120,7 +127,7 @@ eval (ELambda (varname, vartype) e) = do
     let ec = firstArg context in do
       modify popArg
       modify (insertExpr varname ec)
-      ev <- mytrace ("[ELambda] EvalValue.eval: " ++ show e) EvalValue.eval e
+      ev <- mytrace ("[ELambda] EvalWHNF.eval: " ++ show e) EvalWHNF.eval e
       modify (deleteExpr varname)
       return ev
 
@@ -128,7 +135,7 @@ eval (ELambda (varname, vartype) e) = do
 eval (ELet (varname, e1) e2) = do
   context <- get
   modify (insertExpr varname (e1, context))
-  t <- mytrace ("[ELet] EvalValue.eval: " ++ show e2) EvalValue.eval e2
+  t <- mytrace ("[ELet] EvalWHNF.eval: " ++ show e2) EvalWHNF.eval e2
   modify (deleteExpr varname)
   return t
 
@@ -136,7 +143,7 @@ eval (ELet (varname, e1) e2) = do
 eval (ELetRec funcname (argname,argtype) (funcExpr, returntype) expr) = do
   context <- get
   modify (insertRecExpr funcname (ELambda (argname, argtype) funcExpr, context))
-  t <- mytrace ("[ELetRec] EvalValue.eval: " ++ show expr) EvalValue.eval expr
+  t <- mytrace ("[ELetRec] EvalWHNF.eval: " ++ show expr) EvalWHNF.eval expr
   modify (deleteRecExpr funcname)
   return t
 
@@ -146,20 +153,20 @@ eval (EVar varname) = do
   case lookupExpr context varname of 
       Just ec -> do
           put $ snd ec
-          ev <- mytrace ("[EVar] EvalValue.eval: " ++ show (fst ec)) EvalValue.eval (fst ec)
+          ev <- mytrace ("[EVar] EvalWHNF.eval: " ++ show (fst ec)) EvalWHNF.eval (fst ec)
           put context
           return ev
       Nothing -> 
         case lookupRecExpr context varname of 
           Just ec -> do
               put $ snd ec
-              ev <- mytrace ("[EVar] EvalValue.eval: " ++ show (fst ec)) EvalValue.eval (fst ec)
+              ev <- mytrace ("[EVar] EvalWHNF.eval: " ++ show (fst ec)) EvalWHNF.eval (fst ec)
               put context
               return ev
           Nothing ->  -- ADT constructor without arguments
               case lookupConstructor context varname of
                   Just (adtname, []) -> 
-                    mytrace ("[EVar] EvalValue.eval: " ++ show (EConstructor varname [])) EvalValue.eval (EConstructor varname [])
+                    mytrace ("[EVar] EvalWHNF.eval: " ++ show (EConstructor varname [])) EvalWHNF.eval (EConstructor varname [])
                   _ -> lift Nothing
   
 
@@ -169,25 +176,25 @@ eval (EApply e1 e2) =
     ELambda e3@(varname, _) e4 -> do
       context <- get
       modify (pushArg (e2, context))
-      mytrace ("[EApply] EvalValue.eval: " ++ show e1) EvalValue.eval e1
+      mytrace ("[EApply] EvalWHNF.eval: " ++ show e1) EvalWHNF.eval e1
     EApply e3 e4 -> do
       context <- get
       modify (pushArg (e2, context))
-      mytrace ("[EApply] EvalValue.eval: " ++ show e1) EvalValue.eval e1
+      mytrace ("[EApply] EvalWHNF.eval: " ++ show e1) EvalWHNF.eval e1
     EVar funcname -> do
       context <- get
       case lookupExpr context funcname of
         Just ec -> do
           let args = getAllArgs context
           modify popAll
-          mytrace ("[EApply] EvalValue.eval: " ++ show (EVar funcname)) EvalValue.evalVar (EVar funcname) ((e2, context):args)
+          mytrace ("[EApply] EvalWHNF.eval: " ++ show (EVar funcname)) EvalWHNF.evalVar (EVar funcname) ((e2, context):args)
         _ -> case lookupRecExpr context funcname of
             Just ec -> do
               put $ snd ec
               modify (insertExpr funcname ec)
               put context
               modify (pushArg (e2, context))
-              ev <- mytrace ("[E] EvalValue.eval: " ++ show (fst ec)) EvalValue.eval (fst ec)
+              ev <- mytrace ("[E] EvalWHNF.eval: " ++ show (fst ec)) EvalWHNF.eval (fst ec)
               put $ snd ec
               modify (deleteExpr funcname)
               put context
@@ -195,7 +202,7 @@ eval (EApply e1 e2) =
             _ -> case lookupConstructor context funcname of
                     Just (adtname, argList) -> do
                       modify (pushArg (e2, context))
-                      mytrace ("[EApply] eval: " ++ show (EConstructor funcname [])) EvalValue.eval (EConstructor funcname [])
+                      mytrace ("[EApply] eval: " ++ show (EConstructor funcname [])) eval (EConstructor funcname [])
                     _ -> lift Nothing
     _ -> lift Nothing
 
@@ -209,26 +216,28 @@ eval (ECase e list) = do
       if ebool
       then do
         bindPattern (fst p) e context
-        result <- mytrace ("[ECase] match succeed: " ++ show (fst p)) EvalValue.eval (snd p)
+        result <- mytrace ("[ECase] match succeed: " ++ show (fst p)) EvalWHNF.eval (snd p)
         unbindPattern $ fst p
         return result
       else
-        mytrace ("[ECase] match failed: " ++ show (fst p)) EvalValue.eval (ECase e ps)
+        mytrace ("[ECase] match failed: " ++ show (fst p)) EvalWHNF.eval (ECase e ps)
     _ -> lift Nothing
 
 -- ADT constructor
-eval (EConstructor constructor []) = do
+eval (EConstructor constructor argList) = do
   context <- get
   case lookupConstructor context constructor of
     Just (adtname, typeList)
-      | countArg context < length typeList -> lift Nothing
+      | length argList == length typeList -> 
+          return $ VWHNF adtname constructor argList context
       | otherwise -> 
-        let ecs = firstArgs (length typeList) context in do  
-          modify $ popArgs (length typeList)
-          values <- evalExprContextList ecs
-          return $ EvalWHNF.VData constructor values
-          
-
+        if emptyArg context
+          then lift Nothing
+          else
+            let ec = firstArg context in do  
+              modify popArg
+              mytrace ("[EConstructor] EvalWHNF.eval: " ++ show (EConstructor constructor (argList ++ [fst ec]))) EvalWHNF.eval $ EConstructor constructor (argList ++ [fst ec])
+              
 -- variable with arg
 evalVar :: Expr -> [(Expr, ContextV)] -> ContextStateV Value
 evalVar (EVar varname) args = do
@@ -238,26 +247,26 @@ evalVar (EVar varname) args = do
           case fst ec of
             EVar varname2 -> do
               put $ snd ec
-              ev <- mytrace ("[EVar] EvalValue.evalVar: " ++ show (EVar varname2)) EvalValue.evalVar (EVar varname2) args
+              ev <- mytrace ("[EVar] EvalWHNF.evalVar: " ++ show (EVar varname2)) EvalWHNF.evalVar (EVar varname2) args
               put context
               return ev
             _ -> do
               put $ snd ec
               modify (pushArgs args)
-              ev <- mytrace ("[EVar] EvalValue.evalVar: " ++ show (fst ec)) EvalValue.eval (fst ec)
+              ev <- mytrace ("[EVar] EvalWHNF.evalVar: " ++ show (fst ec)) EvalWHNF.eval (fst ec)
               put context
               return ev
       Nothing -> 
         case lookupRecExpr context varname of 
           Just ec -> do
               put $ snd ec
-              ev <- mytrace ("[EVar] EvalValue.eval: " ++ show (fst ec)) EvalValue.eval (fst ec)
+              ev <- mytrace ("[EVar] EvalWHNF.eval: " ++ show (fst ec)) EvalWHNF.eval (fst ec)
               put context
               return ev
           Nothing ->  -- ADT constructor without arguments
               case lookupConstructor context varname of
                   Just (adtname, []) -> 
-                    mytrace ("[EVar] EvalValue.eval: " ++ show (EConstructor varname [])) EvalValue.eval (EConstructor varname [])
+                    mytrace ("[EVar] EvalWHNF.eval: " ++ show (EConstructor varname [])) EvalWHNF.eval (EConstructor varname [])
                   _ -> lift Nothing
 
 
@@ -277,19 +286,19 @@ matchPattern :: Pattern -> Expr -> ContextStateV Bool
 matchPattern p e =
   case p of
     PBoolLit x -> do
-      ev <- mytrace ("match pattern eval: " ++ show e) EvalValue.eval e
-      return $ ev == EvalWHNF.VBool x
+      ev <- mytrace ("match pattern eval: " ++ show e) eval e
+      return $ ev == VBool x
     PIntLit x -> do
-      ev <- mytrace ("match pattern eval: " ++ show e) EvalValue.eval e
-      return $ ev == EvalWHNF.VInt x
+      ev <- mytrace ("match pattern eval: " ++ show e) eval e
+      return $ ev == VInt x
     PCharLit x -> do
-      ev <- mytrace ("match pattern eval: " ++ show e) EvalValue.eval e
-      return $ ev == EvalWHNF.VChar x
+      ev <- mytrace ("match pattern eval: " ++ show e) eval e
+      return $ ev == VChar x
     PVar varname -> return True
     PData funcname patterns -> do
-      ev <- mytrace ("match pattern eval: " ++ show e) EvalWHNF.eval e
+      ev <- mytrace ("match pattern eval: " ++ show e) eval e
       case ev of
-        EvalWHNF.VWHNF adtname constructor exprList context -> 
+        VWHNF adtname constructor exprList context -> 
           if funcname == constructor
           then do
             put context
@@ -319,7 +328,7 @@ bindPattern p e context =
       ev <- EvalWHNF.eval e
       put oldcontext
       case ev of
-        EvalWHNF.VWHNF adtname constructor exprList context' -> do
+        VWHNF adtname constructor exprList context' -> do
           bindPatterns patterns exprList context'
           return ()
         _ -> lift Nothing
@@ -343,41 +352,10 @@ unbindPattern p =
     PData constructor patterns -> 
       unbindPatterns patterns
 
-parseValueToResult :: Value -> Result
-parseValueToResult v = case v of
-    EvalWHNF.VBool b -> RBool b
-    EvalWHNF.VInt i -> RInt i
-    EvalWHNF.VChar c -> RChar c
-    EvalWHNF.VData adtname valueList -> RData adtname $ map parseValueToResult valueList
 
 evalExprList :: [Expr] -> ContextStateV [Value]
 evalExprList [] = return []
 evalExprList (e:es) = do
-  ev <- EvalValue.eval e
+  ev <- EvalWHNF.eval e
   esv <- evalExprList es
   return (ev:esv)
-
-evalExprContextList :: [(Expr, ContextV)] -> ContextStateV [Value]
-evalExprContextList [] = return []
-evalExprContextList (ec:ecs) = do
-  context <- get
-  put $ snd ec
-  ev <- EvalValue.eval $ fst ec
-  put context
-  esv <- EvalValue.evalExprContextList ecs
-  return (ev:esv)
-
-evalValue :: Program -> Result
-evalValue p = case evalProgram p of
-  Just v -> parseValueToResult v
-  Nothing -> RInvalid
-
-evalProgram :: Program -> Maybe Value
-evalProgram (Program adts body) = evalStateT (EvalValue.eval body) $
-  ContextV { adtMap = initAdtMap adts, 
-            constructorMap = initConstructorMap adts,
-            typeMap = Map.empty, 
-            exprMap = Map.empty,
-            exprRecMap = Map.empty,
-            argList = [],
-            logList = ["start EvalValue Program"] }

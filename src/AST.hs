@@ -228,7 +228,7 @@ data Result
   | RChar Char
   -- ^存放字符类型求值结果。
 
-  | RData String String -- RData adtname constructor
+  | RData String [Result] -- RData adtname argList
   -- ADT类型的求值结果
   
   | RInvalid

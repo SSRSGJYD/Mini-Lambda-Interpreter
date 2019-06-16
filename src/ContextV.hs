@@ -106,8 +106,14 @@ emptyArg context = null $ argList context
 firstArg :: ContextV -> (Expr, ContextV)
 firstArg (ContextV adtMap constructorMap typeMap exprMap exprRecMap argList log) = mytrace ("### first arg:" ++ show (fst $ head argList)) head argList
 
+firstArgs :: Int -> ContextV -> [(Expr, ContextV)]
+firstArgs n (ContextV adtMap constructorMap typeMap exprMap exprRecMap argList log) = mytrace ("### first" ++ show n ++ "arg:") take n argList
+
 popArg :: ContextV -> ContextV
 popArg (ContextV adtMap constructorMap typeMap exprMap exprRecMap argList log) = mytrace ("### poping arg:" ++ show (fst $ head argList)) ContextV adtMap constructorMap typeMap exprMap exprRecMap (tail argList) log
+
+popArgs :: Int -> ContextV -> ContextV
+popArgs n (ContextV adtMap constructorMap typeMap exprMap exprRecMap argList log) = mytrace ("### poping args:") ContextV adtMap constructorMap typeMap exprMap exprRecMap (drop n argList) log
 
 countArg :: ContextV -> Int
 countArg context = length $ argList context

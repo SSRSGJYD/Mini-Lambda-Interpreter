@@ -35,6 +35,9 @@ doEval context = do
             Bind varname e -> 
                 let context' = insertBind varname e context in
                     doEval context'
+            BindRec v -> 
+                let context' = insertRecBind v context in
+                    doEval context'
             Exec e -> case exec e context of
                 Left error -> do
                     putStrLn "*** MiniRepl Error: execution failed."
@@ -74,6 +77,9 @@ doEval context = do
                                 doEval context
                         Bind varname e -> 
                             let context' = insertBind varname e context in
+                                doEval context'
+                        BindRec v -> 
+                            let context' = insertRecBind v context in
                                 doEval context'
                         Exec e -> case exec e context of
                             Left error -> do

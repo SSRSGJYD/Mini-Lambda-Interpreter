@@ -21,8 +21,8 @@ rword w = (lexeme . try) (string w *> notFollowedBy alphaNumChar)
 reserve :: [String] -- list of reserve words
 reserve = ["True","False","not","and","or","add","sub","mul","div","mod",
             "if","then","else","let","in","letrec","where","case","data", 
-            "\\", ".", "->", "-->", "$", "+", "-", "*", "/", "%", "&&", "||",
-            "!","==","/=","="]
+            "\\", ".", "->", "==>", "$", "+", "-", "*", "/", "%", "&&", "||",
+            "!","==","/=","=", "#"]
 
 sc :: Parser ()
 sc = L.space space1 lineCmnt blockCmnt
@@ -194,17 +194,8 @@ goLambda (arg:args) e = ELambda (varname, vartype) $ goLambda args e
 
 variableExprParser :: Parser Expr
 variableExprParser = try $ do
-    -- void (symbol "#")
     varname <- identifierParser
     return (EVar varname)
-
--- applyExprParser :: Parser Expr
--- applyExprParser = try $ do
---     void (symbol "|")
---     e1 <- exprParser
---     rword  "$"
---     e2 <- exprParser
---     return (EApply e1 e2)
 
 -- deal with case expr and patterns
 caseExprParser :: Parser Expr
@@ -223,7 +214,7 @@ patternAssignsParser = sepBy1 patternAssignParser (symbol ";")
 patternAssignParser :: Parser (Pattern, Expr)
 patternAssignParser = try $ do
     apattern <- patternParser
-    symbol "-->"
+    symbol "==>"
     expr <- exprParser
     return (apattern, expr)
 
@@ -231,6 +222,9 @@ patternAssignParser = try $ do
 patternsParser :: Parser [Pattern]
 patternsParser = sepBy1 patternParser (symbol ",")
 
+-- can be empty
+patternsOrNoneParser :: Parser [Pattern]
+patternsOrNoneParser = sepBy patternParser (symbol ",")
 
 patternParser :: Parser Pattern
 patternParser = try (PBoolLit True <$ rword "True")
@@ -263,10 +257,11 @@ constructorParser = try $ do
 
 adtPatternParser :: Parser Pattern
 adtPatternParser = try $ do
-  symbol "["
+  symbol "#"
   constructor <- identifierParser
-  symbol "]"
-  patterns <- patternsParser
+  symbol "("
+  patterns <- patternsOrNoneParser
+  symbol ")"
   return $ PData constructor patterns
 
 

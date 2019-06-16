@@ -1,0 +1,28 @@
+在repl下：
+data Maybe = Just(Int) | Nothing()
+data List = Cons(Int, List) | Nil()
+data Tuple = T(List,List)
+let fst = \(t::Tuple) -> case t of #T(f,s) ==> f
+let snd = \(t::Tuple) -> case t of #T(f,s) ==> s
+
+-- saveDiv
+let saveDiv = \(x::Int,y::Int) -> if y == 0 then Nothing else Just $ (x % y)
+eval saveDiv $ 7 $ 2
+eval saveDiv $ 7 $ 0
+
+-- filter
+let g = \(x::Int) -> if (x%2)==0 then True else False
+letrec List def filter(l::List){case l of #Nil() ==> Nil; #Cons(x,xs) ==> if g $ x then Cons $ x $ (filter $ xs) else filter $ xs}
+eval filter $ (Cons $ 1 $ (Cons $ 2 $ (Cons $ 3 $ Nil)))
+
+-- (==)
+letrec Bool def ListEq(t::Tuple){case (fst $ t) of #Nil() ==> (case (snd $ t) of #Nil() ==> True; #Cons(y,ys) ==> False); #Cons(x,xs) ==> (case (snd $ t) of #Nil() ==> False; #Cons(y,ys)==> if x==y then ListEq $ (T $ xs $ ys) else False)}
+eval ListEq $ (T $ (Cons $ 1 $ (Cons $ 2 $ Nil)) $ (Cons $ 1 $ (Cons $ 2 $ Nil)))
+eval ListEq $ (T $ (Cons $ 1 $ (Cons $ 2 $ Nil)) $ (Cons $ 1 $ (Cons $ 3 $ Nil)))
+eval ListEq $ (T $ (Cons $ 1 $ (Cons $ 2 $ Nil)) $ (Cons $ 1 $ Nil))
+
+-- map function
+let f = \(x::Int) -> x*x
+letrec List def map(l::List){case l of #Nil() ==> Nil; #Cons(x,xs) ==> (Cons $ (f $ x)) $ (map $ xs)}
+eval map $ (Cons $ 1 $ (Cons $ 2 $ (Cons $ 3 $ Nil)))
+

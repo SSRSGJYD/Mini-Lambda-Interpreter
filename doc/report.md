@@ -65,10 +65,11 @@
 <case_expr> := case <expr> of <patternAssigns>
 
 <patternAssigns> := <patternAssign>; <patternAssign>; .. ;<patternAssign>
-<patternAssign> := <patterns> --> <expr>
+<patternAssign> := <patterns> ==> <expr>
 <patterns> := <pattern>, <pattern>, .. ,<pattern>
+<patternsOrNone> := <patterns> | _
 <pattern> := <bool> | <int> | <char> | <identifier> | <adtpattern>
-<adtpattern> := [<identifier>] patterns
+<adtpattern> := #<identifier>(patterns)
 
 -- adt definition grammar
 <adtDefine> := data <identifier> = <constructors>

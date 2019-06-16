@@ -30,6 +30,7 @@ library
       AST
       EvalType
       EvalValue
+      EvalWHNF
       ContextT
       ContextV
       ReplContext

@@ -15,6 +15,7 @@ import qualified Text.Megaparsec.Char.Lexer as L
 data ReplStat = ADTDefine ADT 
     | JudgeType Expr 
     | Bind String Expr 
+    | BindRec ((String, (String, Type)), (Expr, Type))
     | Exec Expr 
     | Block
     | Binding
@@ -23,6 +24,7 @@ data ReplStat = ADTDefine ADT
 
 replParser :: MiniParser.Parser ReplStat
 replParser = try bindParser
+        <|> try bindRecParser
         <|> try execParser
         <|> try evalTypeParser
         <|> try adtParser
@@ -43,6 +45,22 @@ bindParser = try $ do
     symbol "="
     e <- exprParser
     return $ Bind varname e
+
+bindRecParser :: MiniParser.Parser ReplStat
+bindRecParser = try $ do
+    rword "letrec"
+    returntype <- typeParser
+    rword "def"
+    funcname <- identifierParser
+    void (symbol "(")
+    argname <- identifierParser
+    void (symbol "::")
+    argtype <- typeParser
+    void (symbol ")")
+    void (symbol "{")
+    funcbody <- exprParser
+    void (symbol "}")
+    return $ BindRec ((funcname, (argname, argtype)),(funcbody, returntype))
 
 evalTypeParser :: MiniParser.Parser ReplStat
 evalTypeParser = try $ do
