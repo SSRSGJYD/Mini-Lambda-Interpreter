@@ -293,6 +293,7 @@ testParser input =
 
 test :: IO ()
 test = do
+  testParser "(let x = 1 in x+x)+10"
   testParser "True"
   testParser "40+2"
   testParser "\'@\' /= \'@\'"
